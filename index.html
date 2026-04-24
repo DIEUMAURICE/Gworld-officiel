@@ -265,17 +265,37 @@
         .section-head svg { width: 17px; height: 17px; color: var(--primary-light); }
         .section-head h2 { font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
 
-        /* ANIME GRID */
-        .anime-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; }
+/* 1. On force la grille à créer plusieurs petites colonnes */
+.anime-grid {
+    display: grid;
+    /* minmax(100px, 1fr) permet d'avoir des photos de 100px minimum */
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); 
+    gap: 10px; /* Espace entre les photos */
+    padding: 10px;
+}
 
-        .anime-card {
-            cursor: pointer;
-            border-radius: 0.5rem;
-            overflow: hidden;
-            background: var(--bg3);
-            border: 1px solid var(--border);
-            transition: all 0.25s;
-        }
+/* 2. On s'assure que la carte prend tout l'espace de sa colonne */
+.anime-card {
+    width: 100%;
+}
+
+/* 3. On force le format vertical (Portrait) */
+.card-poster {
+    width: 100%;
+    aspect-ratio: 2 / 3; /* Format affiche de film vertical */
+    border-radius: 8px;
+    overflow: hidden;
+    background: #1e1e35;
+}
+
+/* 4. L'image doit remplir TOUT son cadre vertical */
+.card-poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Important : remplit sans déformer */
+    display: block;
+}
+
 
         .anime-card:hover { transform: translateY(-5px); border-color: var(--primary); box-shadow: 0 8px 25px rgba(124,58,237,0.25); }
 
