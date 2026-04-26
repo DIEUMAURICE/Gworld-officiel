@@ -266,7 +266,27 @@
         .section-head h2 { font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
 
         /* ANIME GRID */
-        .anime-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1.25rem; }
+        /* CARROUSEL HORIZONTAL */
+        .anime-grid {
+            display: flex;
+            flex-direction: row;
+            overflow-x: auto;
+            gap: 0.75rem;
+            padding-bottom: 0.5rem;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .anime-grid::-webkit-scrollbar { height: 4px; }
+        .anime-grid::-webkit-scrollbar-track { background: rgba(124,58,237,0.05); border-radius: 2px; }
+        .anime-grid::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 2px; }
+
+        /* Grille classique pour catalogue et profil */
+        .anime-grid-catalog {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+        }
 
         .anime-card {
             cursor: pointer;
@@ -275,9 +295,11 @@
             background: var(--bg3);
             border: 1px solid var(--border);
             transition: all 0.25s;
+            flex: 0 0 110px;
+            width: 110px;
         }
 
-        .anime-card:hover { transform: translateY(-5px); border-color: var(--primary); box-shadow: 0 8px 25px rgba(124,58,237,0.25); }
+        .anime-card:hover { transform: translateY(-4px); border-color: var(--primary); box-shadow: 0 6px 20px rgba(124,58,237,0.25); }
 
         .card-poster {
             aspect-ratio: 2/3;
@@ -315,8 +337,8 @@
         .anime-card:hover .card-overlay { background: rgba(0,0,0,0.5); }
 
         .card-play {
-            width: 42px;
-            height: 42px;
+            width: 36px;
+            height: 36px;
             background: var(--primary);
             border-radius: 50%;
             display: flex;
@@ -327,24 +349,24 @@
             transition: all 0.3s;
         }
 
-        .card-play svg { width: 16px; height: 16px; color: white; }
+        .card-play svg { width: 14px; height: 14px; color: white; }
         .anime-card:hover .card-play { opacity: 1; transform: scale(1); }
 
-        .card-info { padding: 0.6rem; }
+        .card-info { padding: 0.4rem 0.5rem 0.5rem; }
 
         .card-title {
-            font-size: 0.82rem;
+            font-size: 0.75rem;
             font-weight: 600;
             color: var(--text);
-            line-height: 1.4;
-            min-height: 2.3em;
+            line-height: 1.3;
+            min-height: 2em;
             overflow: hidden;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
         }
 
-        .card-genre { font-size: 0.72rem; color: var(--text2); margin-top: 0.2rem; }
+        .card-genre { font-size: 0.65rem; color: var(--text2); margin-top: 0.15rem; }
 
         /* FILTER BAR */
         .filter-bar { display: flex; gap: 0.6rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
@@ -873,7 +895,8 @@
             .sidebar.open { transform: translateX(0); }
             .main { margin-left: 0; max-width: 100vw; padding: 1.25rem; }
             footer { margin-left: 0; }
-            .anime-grid { grid-template-columns: repeat(auto-fill, minmax(115px, 1fr)); gap: 1rem; }
+            .anime-grid { gap: 0.6rem; }
+            .anime-grid .anime-card { flex: 0 0 95px; width: 95px; }
             .detail-wrap { flex-direction: column; }
             .detail-poster { width: 100%; max-width: 170px; }
             .profile-stats { gap: 1.25rem; }
@@ -1008,7 +1031,7 @@
                 <button class="f-btn" onclick="setCatalogFilter('serie',event)">SÉRIES</button>
                 <button class="f-btn" onclick="setCatalogFilter('film',event)">FILMS</button>
             </div>
-            <div id="grid-catalog"><div class="loading"><div class="spinner"></div> Chargement...</div></div>
+            <div id="grid-catalog" class="anime-grid-catalog"><div class="loading"><div class="spinner"></div> Chargement...</div></div>
             <div class="empty-state" id="empty-catalog" style="display:none;">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <p>Aucun anime trouvé</p>
@@ -1097,21 +1120,21 @@
                 <button class="tab-btn" onclick="profileTab('history',event)">HISTORIQUE</button>
             </div>
             <div id="tab-favorites" class="tab-content active">
-                <div class="anime-grid" id="grid-favorites"></div>
+                <div class="anime-grid-catalog" id="grid-favorites"></div>
                 <div class="empty-state" id="empty-favorites">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                     <p>Aucun favori pour le moment</p>
                 </div>
             </div>
             <div id="tab-watchlist" class="tab-content">
-                <div class="anime-grid" id="grid-watchlist"></div>
+                <div class="anime-grid-catalog" id="grid-watchlist"></div>
                 <div class="empty-state" id="empty-watchlist">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
                     <p>Aucun anime dans votre liste</p>
                 </div>
             </div>
             <div id="tab-history" class="tab-content">
-                <div class="anime-grid" id="grid-history"></div>
+                <div class="anime-grid-catalog" id="grid-history"></div>
                 <div class="empty-state" id="empty-history">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="12,8 12,12 14,14"/><path d="M3.05 11a9 9 0 1 0 .5-4"/><polyline points="3,3 3,7 7,7"/></svg>
                     <p>Aucun historique</p>
@@ -1238,8 +1261,8 @@
             <ul>
                 <li><a onclick="goPage('contact')">Nous Contacter</a></li>
                 <li><a onclick="goPage('help')">FAQ</a></li>
-                <li><a href="https://twitter.com" target="_blank">Twitter</a></li>
-                <li><a href="https://discord.com" target="_blank">Discord</a></li>
+                <li><a href="https://t.me/GWORLDORIGINALANIMESSERIES" target="_blank">Telegram</a></li>
+                <li><a href="https://chat.whatsapp.com/EH7DPffhIOpKQpf1vi4RI2?mode=gi_t" target="_blank">WhatsApp</a></li>
             </ul>
         </div>
         <div class="footer-col">
@@ -1450,8 +1473,13 @@ function renderGrid(containerId, list) {
     const el = document.getElementById(containerId);
     if (!el) return;
     if (!list.length) { el.innerHTML = ''; return; }
+
+    // Cartes plus grandes pour catalogue et profil
+    const isCatalog = el.classList.contains('anime-grid-catalog');
+    const cardStyle = isCatalog ? 'style="flex:none;width:auto;"' : '';
+
     el.innerHTML = list.map(a => `
-        <div class="anime-card" onclick="openAnime('${a.id}')">
+        <div class="anime-card" onclick="openAnime('${a.id}')" ${cardStyle}>
             <div class="card-poster">
                 ${a.poster_url ? `<img src="${esc(a.poster_url)}" alt="${esc(a.title)}" loading="lazy" onerror="this.style.display='none'">` : ''}
                 <div class="card-overlay"><div class="card-play"><svg viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg></div></div>
