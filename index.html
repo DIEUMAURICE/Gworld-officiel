@@ -230,7 +230,9 @@
         .genre-tag:hover { background: rgba(124,58,237,0.15); color: var(--primary-light); border-color: var(--primary); }
 
         /* MAIN */
-        .main { margin-left: 240px; flex: 1; padding: 2rem; max-width: calc(100vw - 240px); overflow-x: visible !important; }
+        .main { 
+    margin-left: 240px;
+    overflow-x: visible !important; flex: 1; padding: 2rem; max-width: calc(100vw - 240px); overflow-x: visible !important; }
 
         .page { display: none; }
         .page.active { display: block; animation: fadeIn 0.25s ease; }
@@ -1012,21 +1014,24 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
                     <h2>Récemment Ajoutés</h2>
                 </div>
-                <div id="grid-recent"><div class="loading"><div class="spinner"></div> Chargement...</div></div>
+                <!-- AJOUT DE class="anime-grid" -->
+                <div id="grid-recent" class="anime-grid"><div class="loading"><div class="spinner"></div> Chargement...</div></div>
             </div>
             <div class="section">
                 <div class="section-head">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23,6 13.5,15.5 8.5,10.5 1,18"/><polyline points="17,6 23,6 23,12"/></svg>
                     <h2>Tendances</h2>
                 </div>
-                <div id="grid-trending"><div class="loading"><div class="spinner"></div> Chargement...</div></div>
+                <!-- AJOUT DE class="anime-grid" -->
+                <div id="grid-trending" class="anime-grid"><div class="loading"><div class="spinner"></div> Chargement...</div></div>
             </div>
             <div class="section" id="sec-continue" style="display:none;">
                 <div class="section-head">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,3 19,12 5,21 5,3"/></svg>
                     <h2>Continuez Votre Visionnage</h2>
                 </div>
-                <div id="grid-continue"></div>
+                <!-- AJOUT DE class="anime-grid" -->
+                <div id="grid-continue" class="anime-grid"></div>
             </div>
         </div>
 
