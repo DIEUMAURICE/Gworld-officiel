@@ -230,7 +230,7 @@
         .genre-tag:hover { background: rgba(124,58,237,0.15); color: var(--primary-light); border-color: var(--primary); }
 
         /* MAIN */
-        .main { margin-left: 240px; flex: 1; padding: 2rem; max-width: calc(100vw - 240px); }
+        .main { margin-left: 240px; flex: 1; padding: 2rem; max-width: calc(100vw - 240px); overflow-x: visible !important; }
 
         .page { display: none; }
         .page.active { display: block; animation: fadeIn 0.25s ease; }
@@ -266,23 +266,30 @@
         .section-head h2 { font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
 
         /* ANIME GRID */
-        /* CARROUSEL HORIZONTAL */
-        .anime-grid {
-            display: flex;
-            flex-direction: row;
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            overflow-y: visible;
-            gap: 0.75rem;
-            padding-bottom: 0.5rem;
-            scroll-behavior: smooth;
-            -webkit-overflow-scrolling: touch;
-            width: 100%;
-        }
+        /* CARROUSEL HORIZONTAL - CORRIGÉ */
+.anime-grid {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 0.75rem;
+    padding-bottom: 0.75rem;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    min-width: 0;
+    width: 100%;
+}
 
-        .anime-grid::-webkit-scrollbar { height: 4px; }
-        .anime-grid::-webkit-scrollbar-track { background: rgba(124,58,237,0.05); border-radius: 2px; }
-        .anime-grid::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 2px; }
+.anime-grid::-webkit-scrollbar { height: 6px; }
+.anime-grid::-webkit-scrollbar-track { background: rgba(124,58,237,0.05); border-radius: 3px; margin: 0 5px; }
+.anime-grid::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 3px; }
+
+/* Support Firefox */
+.anime-grid {
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) rgba(124,58,237,0.05);
+}
 
         /* Grille classique pour catalogue et profil */
         .anime-grid-catalog {
@@ -300,8 +307,6 @@
             transition: all 0.25s;
             flex: 0 0 110px;
             width: 110px;
-            min-width: 110px;
-            max-width: 110px;
         }
 
         .anime-card:hover { transform: translateY(-4px); border-color: var(--primary); box-shadow: 0 6px 20px rgba(124,58,237,0.25); }
