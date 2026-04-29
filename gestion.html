@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Gestion des vidéos - DoodStream</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial; margin: 0; padding: 20px; background: #f1f5f9; }
+    .container { max-width: 1100px; margin: auto; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .logout { background: #ef4444; color: white; border: none; padding: 8px 16px; cursor: pointer; }
+    .breadcrumb { background: white; padding: 10px; border-radius: 4px; margin-bottom: 10px; }
+    .breadcrumb button { background: none; border: none; color: #2563eb; cursor: pointer; margin: 0 5px; }
+    .actions { margin-bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .actions button, .actions input[type="file"] { padding: 8px 16px; background: #2563eb; color: white; border: none; cursor: pointer; border-radius: 4px; }
+    .actions button.upload-btn { background: #16a34a; }
+    .table { width: 100%; background: white; border-collapse: collapse; border-radius: 8px; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
+    .table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    .table th { background: #f8fafc; }
+    .folder-row { cursor: pointer; }
+    .folder-row:hover { background: #f1f5f9; }
+    .btn-sm { padding: 4px 8px; margin: 2px; font-size: 0.8rem; border: none; border-radius: 3px; cursor: pointer; }
+    .btn-rename { background: #f59e0b; color: white; }
+    .btn-move { background: #6366f1; color: white; }
+    .btn-links { background: #2563eb; color: white; }
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+    .modal-content { background: white; padding: 20px; border-radius: 8px; width: 400px; }
+    .modal-content input { width: 100%; padding: 8px; margin-bottom: 10px; }
+    .links-box { background: #f1f5f9; padding: 10px; margin: 10px 0; word-break: break-all; }
+    .close { float: right; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-bar">
+      <h2>Gestionnaire DoodStream</h2>
+      <button class="logout" id="logoutBtn">Déconnexion</button>
+    </div>
+    <div class="breadcrumb" id="breadcrumb"></div>
+    <div class="actions">
+      <button id="newFolderBtn">📁 Nouveau dossier</button>
+      <input type="file" id="uploadFileInput" accept="video/*">
+      <button id="uploadBtn" class="upload-btn">⬆️ Uploader dans ce dossier</button>
+    </div>
+    <table class="table">
+      <thead><tr><th>Nom</th><th>Type</th><th>Actions</th></tr></thead>
+      <tbody id="itemsTable"></tbody>
+    </table>
+  </div>
+
+  <!-- Modale pour renommer -->
+  <div id="renameModal" class="modal">
+    <div class="modal-content">
+      <span class="close" id="closeRename">&times;</span>
+      <h3>Renommer</h3>
+      <input type="text" id="newName" placeholder="Nouveau nom">
+      <button id="confirmRename">Valider</button>
+    </div>
+  </div>
+
+  <!-- Modale pour déplacer -->
+  <div id="moveModal" class="modal">
+    <div class="modal-content">
+      <span class="close" id="closeMove">&times;</span>
+      <h3>Déplacer vers le dossier</h3>
+      <select id="targetFolder"></select>
+      <button id="confirmMove">Déplacer</button>
+    </div>
+  </div>
+
+  <!-- Modale pour les liens -->
+  <div id="linksModal" class="modal">
+    <div class="modal-content">
+      <span class="close" id="closeLinks">&times;</span>
+      <h3>Liens de la vidéo</h3>
+      <div class="links-box" id="linksContent"></div>
+    </div>
+  </div>
+
+  <script>
+    // ⚠️ Remplacez par vos propres valeurs Supabase
+    const SUPABASE_URL = 'https://votre-projet.supabase.co'
+    const SUPABASE_ANON_KEY = 'votre_clé_anon'
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+    let currentFolderId = '0'  // 0 = racine
+    let folderStack = []      // pour la navigation hiérarchique (facultatif, on utilisera juste l'ID parent)
+
+    // Vérification de session
+    async function checkAuth() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { window.location.href = '/login.html'; return null }
+      return session
+    }
+
+    // Déconnexion
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await supabase.auth.signOut()
+      window.location.href = '/login.html'
+    })
+
+    // Charger le contenu du dossier courant
+    async function loadFolder(folderId) {
+      const session = await checkAuth()
+      if (!session) return
+      const res = await fetch('/api/dood-proxy', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'browse', fld_id: folderId })
+      })
+      const data = await res.json()
+      if (data.error) { alert(data.error); return }
+      renderItems(data.folders || [], data.files || [])
+      updateBreadcrumb()
+    }
+
+    // Affichage des dossiers et fichiers
+    function renderItems(folders, files) {
+      const tbody = document.getElementById('itemsTable')
+      tbody.innerHTML = ''
+      folders.forEach(f => {
+        const tr = document.createElement('tr')
+        tr.className = 'folder-row'
+        tr.innerHTML = `
+          <td>📁 <span class="folder-name" data-id="${f.fld_id}">${f.name}</span></td>
+          <td>Dossier</td>
+          <td>
+            <button class="btn-sm btn-rename" data-id="${f.fld_id}" data-type="folder">Renommer</button>
+          </td>
+        `
+        tr.querySelector('.folder-name').addEventListener('click', () => {
+          currentFolderId = f.fld_id
+          folderStack.push({ id: f.fld_id, name: f.name })
+          loadFolder(f.fld_id)
+        })
+        tr.querySelector('.btn-rename').addEventListener('click', (e) => {
+          e.stopPropagation()
+          openRenameModal(f.fld_id, f.name, 'folder')
+        })
+        tbody.appendChild(tr)
+      })
+      files.forEach(f => {
+        const tr = document.createElement('tr')
+        tr.innerHTML = `
+          <td>🎬 ${f.title}</td>
+          <td>Vidéo</td>
+          <td>
+            <button class="btn-sm btn-links" data-code="${f.file_code}">Liens</button>
+            <button class="btn-sm btn-rename" data-code="${f.file_code}" data-type="file">Renommer</button>
+            <button class="btn-sm btn-move" data-code="${f.file_code}">Déplacer</button>
+          </td>
+        `
+        tr.querySelector('.btn-links').addEventListener('click', () => openLinksModal(f.file_code))
+        tr.querySelector('.btn-rename').addEventListener('click', () => openRenameModal(f.file_code, f.title, 'file'))
+        tr.querySelector('.btn-move').addEventListener('click', () => openMoveModal(f.file_code))
+        tbody.appendChild(tr)
+      })
+    }
+
+    function updateBreadcrumb() {
+      const bc = document.getElementById('breadcrumb')
+      bc.innerHTML = '<button data-id="0">🏠 Racine</button>'
+      folderStack.forEach((item, index) => {
+        const btn = document.createElement('button')
+        btn.textContent = ' / ' + item.name
+        btn.dataset.id = item.id
+        btn.addEventListener('click', () => {
+          // Tronquer le stack jusqu'à cet index
+          folderStack = folderStack.slice(0, index + 1)
+          currentFolderId = item.id
+          loadFolder(item.id)
+        })
+        bc.appendChild(btn)
+      })
+    }
+
+    // === Gestion des modales ===
+    let renameTarget = null
+
+    function openRenameModal(id, currentName, type) {
+      document.getElementById('newName').value = currentName
+      renameTarget = { id, type }
+      document.getElementById('renameModal').style.display = 'flex'
+    }
+
+    document.getElementById('closeRename').addEventListener('click', () => {
+      document.getElementById('renameModal').style.display = 'none'
+    })
+
+    document.getElementById('confirmRename').addEventListener('click', async () => {
+      const newName = document.getElementById('newName').value.trim()
+      if (!newName || !renameTarget) return
+      const session = await checkAuth()
+      if (!session) return
+      const action = renameTarget.type === 'folder' ? 'renameFolder' : 'renameFile'
+      const res = await fetch('/api/dood-proxy', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, fld_id: renameTarget.id, name: newName, file_code: renameTarget.id })
+      })
+      const data = await res.json()
+      if (data.status === 200 || data.result === true || data.result === 'true') {
+        document.getElementById('renameModal').style.display = 'none'
+        loadFolder(currentFolderId)
+      } else {
+        alert('Erreur : ' + (data.msg || data.error))
+      }
+    })
+
+    document.getElementById('closeMove').addEventListener('click', () => {
+      document.getElementById('moveModal').style.display = 'none'
+    })
+
+    async function openMoveModal(fileCode) {
+      document.getElementById('moveModal').style.display = 'flex'
+      const select = document.getElementById('targetFolder')
+      select.innerHTML = '<option value="0">Racine</option>'
+      const session = await checkAuth()
+      if (!session) return
+      // Récupérer la liste de tous les dossiers
+      const res = await fetch('/api/dood-proxy', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'listFolders' })
+      })
+      const data = await res.json()
+      if (data.folders) {
+        data.folders.forEach(f => {
+          const opt = document.createElement('option')
+          opt.value = f.fld_id
+          opt.textContent = f.name
+          select.appendChild(opt)
+        })
+      }
+      document.getElementById('confirmMove').onclick = async () => {
+        const targetFld = select.value
+        const resp = await fetch('/api/dood-proxy', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'moveFile', file_code: fileCode, fld_id: targetFld })
+        })
+        const result = await resp.json()
+        if (result.status === 200 || result.result === 'true') {
+          document.getElementById('moveModal').style.display = 'none'
+          loadFolder(currentFolderId)
+        } else {
+          alert('Erreur lors du déplacement.')
+        }
+      }
+    }
+
+    document.getElementById('closeLinks').addEventListener('click', () => {
+      document.getElementById('linksModal').style.display = 'none'
+    })
+
+    async function openLinksModal(fileCode) {
+      const session = await checkAuth()
+      if (!session) return
+      const res = await fetch('/api/dood-proxy', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'getFileInfo', file_code: fileCode })
+      })
+      const data = await res.json()
+      const info = data.result?.[0] || data.result
+      if (!info) {
+        alert('Impossible de récupérer les liens.')
+        return
+      }
+      const links = `
+        <p><strong>Embed :</strong><br><input type="text" value="https://dood.so/e/${info.filecode || fileCode}" readonly onclick="this.select()"></p>
+        <p><strong>Téléchargement :</strong><br><input type="text" value="${info.download_url || 'Non disponible'}" readonly onclick="this.select()"></p>
+        <p><strong>Protégé Embed :</strong><br><input type="text" value="${info.protected_embed || ''}" readonly onclick="this.select()"></p>
+        <p><strong>Protégé Download :</strong><br><input type="text" value="${info.protected_dl || ''}" readonly onclick="this.select()"></p>
+      `
+      document.getElementById('linksContent').innerHTML = links
+      document.getElementById('linksModal').style.display = 'flex'
+    }
+
+    // Création d'un nouveau dossier
+    document.getElementById('newFolderBtn').addEventListener('click', async () => {
+      const name = prompt('Nom du nouveau dossier :')
+      if (!name) return
+      const session = await checkAuth()
+      const res = await fetch('/api/dood-proxy', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'createFolder', name, parent_id: currentFolderId })
+      })
+      const data = await res.json()
+      if (data.status === 200) {
+        loadFolder(currentFolderId)
+      } else {
+        alert('Erreur : ' + (data.msg || data.error))
+      }
+    })
+
+    // Upload de fichier dans le dossier courant
+    document.getElementById('uploadBtn').addEventListener('click', async () => {
+      const fileInput = document.getElementById('uploadFileInput')
+      const file = fileInput.files[0]
+      if (!file) return alert('Choisissez un fichier.')
+      const session = await checkAuth()
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('fld_id', currentFolderId) // on envoie l'ID du dossier
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + session.access_token },
+        body: formData
+      })
+      const data = await res.json()
+      if (data.status === 200) {
+        alert('Vidéo uploadée avec succès !')
+        fileInput.value = ''
+        loadFolder(currentFolderId)
+      } else {
+        alert('Erreur upload : ' + (data.msg || data.error))
+      }
+    })
+
+    // Initialisation
+    checkAuth().then(session => { if (session) loadFolder('0') })
+  </script>
+</body>
+</html>
