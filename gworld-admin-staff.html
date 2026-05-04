@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>G-WORLD Staff Panel</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -22,6 +23,16 @@
             --green: #22c55e;
             --red: #ef4444;
             --yellow: #f59e0b;
+        }
+
+        body.light {
+            --bg: #f4f4f9;
+            --bg2: #ffffff;
+            --bg3: #f0edf7;
+            --bg4: #e8e3f0;
+            --border: rgba(124,58,237,0.4);
+            --text: #1a1a2e;
+            --text2: #444;
         }
 
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
@@ -64,6 +75,7 @@
         .logout-link { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--red); cursor: pointer; transition: opacity 0.2s; }
         .logout-link:hover { opacity: 0.8; }
         .logout-link svg { width: 14px; height: 14px; }
+        .theme-toggle-btn { margin-bottom: 0.5rem; padding: 0.4rem 0.8rem; border: 1px solid var(--border); background: var(--bg3); color: var(--text2); border-radius: 0.4rem; cursor: pointer; font-size: 0.8rem; width: 100%; text-align: center; }
 
         .admin-main { margin-left: 230px; flex: 1; padding: 2rem; min-height: 100vh; }
         .admin-page { display: none; }
@@ -82,10 +94,18 @@
         .table-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
         .table-header h3 { font-size: 0.95rem; font-weight: 700; color: var(--text); }
         table { width: 100%; border-collapse: collapse; }
-        th { padding: 0.75rem 1.25rem; text-align: left; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text2); background: var(--bg3); border-bottom: 1px solid var(--border); }
+        th { padding: 0.75rem 1.25rem; text-align: left; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text2); background: var(--bg3); border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; }
+        th:hover { background: var(--bg4); }
+        th .sort-icon { margin-left: 0.3rem; opacity: 0.5; }
+        th.sorted .sort-icon { opacity: 1; color: var(--primary-light); }
         td { padding: 0.85rem 1.25rem; font-size: 0.875rem; color: var(--text); border-bottom: 1px solid rgba(124,58,237,0.08); }
         tr:last-child td { border-bottom: none; }
         tr:hover td { background: rgba(124,58,237,0.05); }
+
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 0.5rem; padding: 1rem; border-top: 1px solid var(--border); }
+        .pagination button { padding: 0.3rem 0.8rem; background: var(--bg3); border: 1px solid var(--border); color: var(--text); border-radius: 0.3rem; cursor: pointer; font-size: 0.8rem; }
+        .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .pagination .page-info { font-size: 0.8rem; color: var(--text2); }
 
         .form-section { background: var(--bg2); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 1.5rem; }
         .form-section h3 { font-size: 0.85rem; font-weight: 700; color: var(--primary-light); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1.25rem; }
@@ -137,6 +157,8 @@
         .chart-bar-wrap { flex: 1; }
         .chart-val { font-size: 0.78rem; color: var(--primary-light); width: 45px; text-align: right; }
 
+        .chart-container { width: 100%; max-width: 600px; margin: 1rem auto; }
+
         .loading { display: flex; align-items: center; gap: 0.5rem; color: var(--text2); font-size: 0.875rem; padding: 1rem; }
         .spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.7s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -151,6 +173,13 @@
         .modal-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 0.75rem; padding: 2rem; width: 100%; max-width: 460px; }
         .modal-title { font-size: 1.1rem; font-weight: 700; color: var(--primary-light); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1.5rem; }
         .modal-actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; justify-content: flex-end; }
+
+        .confirm-input { margin-top: 0.75rem; }
+        .confirm-input input { width: 100%; padding: 0.5rem; background: var(--bg3); border: 1px solid var(--border); border-radius: 0.3rem; color: var(--text); }
+
+        .poster-preview-wrap { margin-top: 0.75rem; display: none; border-radius: 0.5rem; overflow: hidden; width: 100px; aspect-ratio: 2/3; border: 2px solid var(--primary); background: var(--bg4); }
+        .poster-preview-wrap img { width: 100%; height: 100%; object-fit: cover; }
+        .poster-preview-wrap.show { display: block; }
 
         .empty { text-align: center; padding: 3rem; color: var(--text2); font-size: 0.875rem; }
         .empty svg { width: 36px; height: 36px; opacity: 0.25; margin: 0 auto 1rem; display: block; }
@@ -175,19 +204,10 @@
 <!-- LOGIN -->
 <div class="login-screen" id="loginScreen">
     <div class="login-box">
-        <div class="login-logo">
-            <h1>G-WORLD</h1>
-            <p>Staff Panel</p>
-        </div>
+        <div class="login-logo"><h1>G-WORLD</h1><p>Staff Panel</p></div>
         <form onsubmit="doLogin(event)">
-            <div class="login-field">
-                <label>Email</label>
-                <input type="email" id="loginEmail" required placeholder="staff@exemple.com">
-            </div>
-            <div class="login-field">
-                <label>Mot de Passe</label>
-                <input type="password" id="loginPass" required placeholder="••••••••">
-            </div>
+            <div class="login-field"><label>Email</label><input type="email" id="loginEmail" required placeholder="staff@exemple.com"></div>
+            <div class="login-field"><label>Mot de Passe</label><input type="password" id="loginPass" required placeholder="••••••••"></div>
             <button type="submit" class="login-btn" id="loginBtn">ACCÉDER</button>
             <p class="login-error" id="loginError">Accès refusé. Compte non autorisé.</p>
         </form>
@@ -196,71 +216,52 @@
 
 <!-- ADMIN WRAPPER -->
 <div class="admin-wrap" id="adminWrap">
-
-    <!-- SIDEBAR -->
     <aside class="admin-sidebar" id="adminSidebar">
-        <div class="sidebar-brand">
-            <h2>G-WORLD</h2>
-            <p>Staff Panel</p>
-        </div>
+        <div class="sidebar-brand"><h2>G-WORLD</h2><p>Staff Panel</p></div>
         <nav class="sidebar-nav">
             <div class="nav-group">
                 <div class="nav-group-label">Principal</div>
                 <div class="nav-link active" data-section="dashboard" onclick="goSection('dashboard')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                    Dashboard
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard
                 </div>
                 <div class="nav-link" data-section="animes" onclick="goSection('animes')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
-                    Animes
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>Animes
                 </div>
                 <div class="nav-link" data-section="add-anime" onclick="goSection('add-anime')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    Ajouter Anime
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Ajouter Anime
                 </div>
             </div>
             <div class="nav-group">
                 <div class="nav-group-label">Données</div>
                 <div class="nav-link" data-section="analytics" onclick="goSection('analytics')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                    Statistiques
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Statistiques
                 </div>
             </div>
         </nav>
         <div class="sidebar-footer">
+            <button class="theme-toggle-btn" onclick="toggleTheme()">☀️/🌙 Mode clair</button>
             <div class="admin-badge">
                 <div class="admin-avatar" id="sidebarAvatar">S</div>
                 <span class="admin-name" id="sidebarName">Staff</span>
             </div>
             <div class="logout-link" onclick="doLogout()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                Déconnexion
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Déconnexion
             </div>
         </div>
     </aside>
 
-    <!-- MAIN -->
     <main class="admin-main">
-
         <!-- DASHBOARD -->
         <div id="sec-dashboard" class="admin-page active">
             <div class="page-title">Dashboard</div>
             <div class="page-sub">Vue d'ensemble de la plateforme G-WORLD</div>
             <div class="stats-grid" id="dashStats"><div class="loading"><div class="spinner"></div> Chargement...</div></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:2rem;">
-                <div class="table-wrap">
-                    <div class="table-header"><h3>Animes les Plus Vus</h3></div>
-                    <div style="padding:1.25rem;" id="topAnimes"><div class="loading"><div class="spinner"></div></div></div>
-                </div>
-                <div class="table-wrap">
-                    <div class="table-header"><h3>Derniers Inscrits</h3></div>
-                    <div style="padding:1.25rem;" id="recentUsers"><div class="loading"><div class="spinner"></div></div></div>
-                </div>
+                <div class="table-wrap"><div class="table-header"><h3>Animes les Plus Vus</h3></div><div style="padding:1.25rem;" id="topAnimes"><div class="loading"><div class="spinner"></div></div></div></div>
+                <div class="table-wrap"><div class="table-header"><h3>Derniers Inscrits</h3></div><div style="padding:1.25rem;" id="recentUsers"><div class="loading"><div class="spinner"></div></div></div></div>
             </div>
-            <div class="table-wrap">
-                <div class="table-header"><h3>Derniers Animes Ajoutés</h3></div>
-                <table><thead><tr><th>Titre</th><th>Type</th><th>Genre</th><th>Vues</th><th>Actions</th></tr></thead>
-                <tbody id="dashAnimeTable"><tr><td colspan="5"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
+            <div class="table-wrap"><div class="table-header"><h3>Derniers Animes Ajoutés</h3></div>
+                <table><thead><tr><th>Titre</th><th>Type</th><th>Genre</th><th>Vues</th><th>Actions</th></tr></thead><tbody id="dashAnimeTable"><tr><td colspan="5"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
             </div>
         </div>
 
@@ -268,10 +269,7 @@
         <div id="sec-animes" class="admin-page">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
                 <div class="page-title">Gestion des Animes</div>
-                <button class="btn btn-primary" onclick="goSection('add-anime')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    AJOUTER
-                </button>
+                <button class="btn btn-primary" onclick="goSection('add-anime')">+ AJOUTER</button>
             </div>
             <div class="page-sub">Gérez tous les animes publiés sur G-WORLD</div>
             <div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
@@ -283,14 +281,19 @@
                 </select>
             </div>
             <div class="table-wrap">
-                <table>
-                    <thead><tr><th>Titre</th><th>Type</th><th>Genre</th><th>Saisons</th><th>Épisodes</th><th>Langues</th><th>Vues</th><th>Actions</th></tr></thead>
+                <table id="animeTable">
+                    <thead><tr>
+                        <th data-sort="title">Titre <span class="sort-icon">↕</span></th>
+                        <th data-sort="type">Type <span class="sort-icon">↕</span></th>
+                        <th data-sort="genre">Genre <span class="sort-icon">↕</span></th>
+                        <th>Saisons</th><th>Épisodes</th><th>Langues</th>
+                        <th data-sort="views">Vues <span class="sort-icon">↕</span></th>
+                        <th>Actions</th>
+                    </tr></thead>
                     <tbody id="animeListTable"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
                 </table>
-                <div class="empty" id="animeListEmpty" style="display:none;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    <p>Aucun anime trouvé</p>
-                </div>
+                <div class="pagination" id="animePagination"></div>
+                <div class="empty" id="animeListEmpty" style="display:none;"><p>Aucun anime trouvé</p></div>
             </div>
         </div>
 
@@ -298,66 +301,33 @@
         <div id="sec-add-anime" class="admin-page">
             <div class="page-title" id="addAnimeTitle">Ajouter un Anime</div>
             <div class="page-sub">Remplissez tous les champs nécessaires</div>
-
             <form onsubmit="submitAnime(event)" id="animeForm">
                 <input type="hidden" id="af-id">
-
                 <div class="form-section">
                     <h3>Informations Générales</h3>
                     <div class="form-grid">
                         <div class="form-field"><label>Titre *</label><input type="text" id="af-title" required placeholder="Nom de l'anime"></div>
-                        <div class="form-field"><label>Type *</label>
-                            <select id="af-type" required onchange="toggleTypeFields()">
-                                <option value="serie">Série (plusieurs épisodes)</option>
-                                <option value="film">Film / OVA (un seul contenu)</option>
-                            </select>
-                        </div>
+                        <div class="form-field"><label>Type *</label><select id="af-type" required onchange="toggleTypeFields()"><option value="serie">Série</option><option value="film">Film</option></select></div>
                         <div class="form-field"><label>Genre</label><input type="text" id="af-genre" placeholder="Action, Aventure, etc."></div>
-                        <div class="form-field"><label>Rating (1–10)</label><input type="number" id="af-rating" min="1" max="10" step="0.1" placeholder="8.5"></div>
-                        <div class="form-field"><label>URL de l'affiche (ImgBB)</label><input type="url" id="af-poster" placeholder="https://i.ibb.co/..."></div>
-                        <div class="form-field full"><label>Description / Synopsis</label><textarea id="af-description" placeholder="Résumé de l'anime..."></textarea></div>
+                        <div class="form-field"><label>Rating (1–10)</label><input type="number" id="af-rating" min="1" max="10" step="0.1"></div>
+                        <div class="form-field"><label>URL de l'affiche</label><input type="url" id="af-poster" placeholder="https://i.ibb.co/..." oninput="previewPoster(this.value)"><div class="poster-preview-wrap" id="posterPreview"><img id="posterPreviewImg" src=""></div></div>
+                        <div class="form-field full"><label>Description</label><textarea id="af-description"></textarea></div>
                     </div>
                 </div>
-
-                <!-- FILM -->
                 <div id="filmFields" class="form-section" style="display:none;">
                     <h3>Liens Vidéo du Film</h3>
-                    <div class="lang-block">
-                        <div class="lang-block-title">🇯🇵 VOSTFR</div>
-                        <div class="form-grid">
-                            <div class="form-field"><label>Lien Lecteur DoodStream</label><input type="url" id="film-vostfr-stream" placeholder="https://doodstream.com/d/..."></div>
-                            <div class="form-field"><label>Lien Téléchargement</label><input type="url" id="film-vostfr-dl" placeholder="https://doodstream.com/d/..."></div>
-                        </div>
-                    </div>
-                    <div class="lang-block">
-                        <div class="lang-block-title">🇫🇷 VF</div>
-                        <div class="form-grid">
-                            <div class="form-field"><label>Lien Lecteur DoodStream</label><input type="url" id="film-vf-stream" placeholder="https://doodstream.com/d/..."></div>
-                            <div class="form-field"><label>Lien Téléchargement</label><input type="url" id="film-vf-dl" placeholder="https://doodstream.com/d/..."></div>
-                        </div>
-                    </div>
+                    <div class="lang-block"><div class="lang-block-title">🇯🇵 VOSTFR</div><div class="form-grid"><div class="form-field"><label>Lien Lecteur</label><input type="url" id="film-vostfr-stream"></div><div class="form-field"><label>Lien Téléchargement</label><input type="url" id="film-vostfr-dl"></div></div></div>
+                    <div class="lang-block"><div class="lang-block-title">🇫🇷 VF</div><div class="form-grid"><div class="form-field"><label>Lien Lecteur</label><input type="url" id="film-vf-stream"></div><div class="form-field"><label>Lien Téléchargement</label><input type="url" id="film-vf-dl"></div></div></div>
                 </div>
-
-                <!-- SERIE -->
                 <div id="serieFields">
                     <div class="form-section">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
-                            <h3 style="margin:0;">Saisons et Épisodes</h3>
-                            <button type="button" class="btn btn-ghost btn-sm" onclick="addSeasonUI()">+ SAISON</button>
-                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;"><h3 style="margin:0;">Saisons et Épisodes</h3><button type="button" class="btn btn-ghost btn-sm" onclick="addSeasonUI()">+ SAISON</button></div>
                         <div id="seasonsContainer"></div>
-                        <div class="empty" id="noSeasons">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                            <p>Cliquez sur "+ SAISON" pour commencer</p>
-                        </div>
+                        <div class="empty" id="noSeasons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><p>Cliquez sur "+ SAISON" pour commencer</p></div>
                     </div>
                 </div>
-
                 <div style="display:flex;gap:1rem;flex-wrap:wrap;">
-                    <button type="submit" class="btn btn-primary" id="saveAnimeBtn">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
-                        SAUVEGARDER
-                    </button>
+                    <button type="submit" class="btn btn-primary" id="saveAnimeBtn">SAUVEGARDER</button>
                     <button type="button" class="btn btn-ghost" onclick="resetAnimeForm(); goSection('animes')">ANNULER</button>
                 </div>
             </form>
@@ -369,24 +339,12 @@
             <div class="page-sub">Performances détaillées de la plateforme</div>
             <div class="stats-grid" id="analyticsStats"></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
-                <div class="table-wrap">
-                    <div class="table-header"><h3>Top 10 par Vues</h3></div>
-                    <div style="padding:1.25rem;" id="analyticsTopAnimes"></div>
-                </div>
-                <div class="table-wrap">
-                    <div class="table-header"><h3>Répartition par Genre</h3></div>
-                    <div style="padding:1.25rem;" id="analyticsGenres"></div>
-                </div>
+                <div class="table-wrap"><div class="table-header"><h3>Top 10 par Vues</h3></div><div style="padding:1.25rem;" id="analyticsTopAnimes"></div></div>
+                <div class="table-wrap"><div class="table-header"><h3>Répartition par Genre</h3></div><div class="chart-container"><canvas id="genreChart"></canvas></div></div>
             </div>
-            <div class="table-wrap">
-                <div class="table-header"><h3>Engagement Utilisateurs</h3></div>
-                <table>
-                    <thead><tr><th>Pseudo</th><th>Animes Vus</th><th>Favoris</th><th>Liste</th><th>Score</th></tr></thead>
-                    <tbody id="analyticsUsers"></tbody>
-                </table>
-            </div>
+            <div class="table-wrap"><div class="table-header"><h3>Vues journalières (30 derniers jours)</h3></div><div class="chart-container"><canvas id="viewsChart"></canvas></div></div>
+            <div class="table-wrap"><div class="table-header"><h3>Engagement Utilisateurs</h3></div><table><thead><tr><th>Pseudo</th><th>Animes Vus</th><th>Favoris</th><th>Liste</th><th>Score</th></tr></thead><tbody id="analyticsUsers"></tbody></table></div>
         </div>
-
     </main>
 </div>
 
@@ -395,55 +353,58 @@
     <div class="modal-box">
         <div class="modal-title" id="confirmTitle">Confirmer l'action</div>
         <p id="confirmMsg" style="color:var(--text2);font-size:0.875rem;"></p>
-        <div class="modal-actions">
-            <button class="btn btn-ghost" onclick="closeModal('confirmModal')">ANNULER</button>
-            <button class="btn btn-danger" id="confirmOkBtn">CONFIRMER</button>
-        </div>
+        <div class="confirm-input" id="confirmInputWrap" style="display:none;"><input type="text" id="confirmTextInput" placeholder="SUPPRIMER"></div>
+        <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('confirmModal')">ANNULER</button><button class="btn btn-danger" id="confirmOkBtn">CONFIRMER</button></div>
     </div>
 </div>
 
-<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
 <script>
+// ======================= ÉTAT GLOBAL =======================
 let staffUser = null;
 let staffProfile = null;
 let editingAnimeId = null;
 let seasonUICount = 0;
 let episodeUICounters = {};
 let animeTypeFilterVal = 'all';
-let allAnimesCache = [];
+let formIsDirty = false;
 
-// ---- INIT ----
+const pageState = {
+    animes: { page: 0, size: 20, sort: 'created_at', asc: false }
+};
+
+// ======================= INIT & AUTH =======================
 document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await db.auth.getSession();
     if (session?.user) await checkAccess(session.user);
-
     db.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' && session) await checkAccess(session.user);
         else if (event === 'SIGNED_OUT') showLogin();
     });
+    document.addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            const form = document.getElementById('animeForm');
+            if (document.getElementById('sec-add-anime').classList.contains('active') && form) { e.preventDefault(); form.requestSubmit(); }
+        }
+        if (e.key === 'Escape') closeModal('confirmModal');
+    });
+    document.getElementById('animeForm')?.addEventListener('input', () => { formIsDirty = true; });
 });
 
 async function checkAccess(user) {
     const { data: profile } = await db.from('profiles').select('*').eq('id', user.id).single();
-    // Accepter les rôles 'admin' et 'staff'
     if (!profile || (profile.role !== 'admin' && profile.role !== 'staff')) {
         await db.auth.signOut();
         document.getElementById('loginError').style.display = 'block';
-        document.getElementById('loginError').textContent = 'Accès refusé. Ce compte n\'est pas autorisé.';
+        document.getElementById('loginError').textContent = 'Accès refusé.';
         return;
     }
-    staffUser = user;
-    staffProfile = profile;
+    staffUser = user; staffProfile = profile;
     showPanel();
 }
 
-function showLogin() {
-    document.getElementById('loginScreen').style.display = 'flex';
-    document.getElementById('adminWrap').classList.remove('active');
-}
-
+function showLogin() { document.getElementById('loginScreen').style.display = 'flex'; document.getElementById('adminWrap').classList.remove('active'); }
 function showPanel() {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('adminWrap').classList.add('active');
@@ -466,24 +427,31 @@ async function doLogin(e) {
     }
     btn.disabled = false; btn.textContent = 'ACCÉDER';
 }
+async function doLogout() { await db.auth.signOut(); }
 
-async function doLogout() {
-    await db.auth.signOut();
+function toggleTheme() {
+    document.body.classList.toggle('light');
+    localStorage.setItem('gworld_staff_theme', document.body.classList.contains('light') ? 'light' : 'dark');
 }
+(() => { if (localStorage.getItem('gworld_staff_theme') === 'light') document.body.classList.add('light'); })();
 
+// ======================= NAVIGATION =======================
 function goSection(sec) {
+    if (document.getElementById('sec-add-anime')?.classList.contains('active') && formIsDirty && sec !== 'add-anime') {
+        if (!confirm('Modifications non sauvegardées. Continuer ?')) return;
+        formIsDirty = false;
+    }
     document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
     document.getElementById('sec-' + sec)?.classList.add('active');
     document.querySelector(`[data-section="${sec}"]`)?.classList.add('active');
-
     if (sec === 'dashboard') renderDashboard();
-    else if (sec === 'animes') loadAnimeList();
+    else if (sec === 'animes') loadAnimesPage();
     else if (sec === 'analytics') renderAnalytics();
     else if (sec === 'add-anime' && !editingAnimeId) { resetAnimeForm(); document.getElementById('addAnimeTitle').textContent = 'Ajouter un Anime'; }
 }
 
-// ---- DASHBOARD (identique à l'original) ----
+// ======================= DASHBOARD =======================
 async function renderDashboard() {
     const { data: stats } = await db.rpc('get_admin_stats');
     document.getElementById('dashStats').innerHTML = `
@@ -491,101 +459,112 @@ async function renderDashboard() {
         <div class="stat-card"><div class="stat-card-label">Utilisateurs</div><div class="stat-card-value">${stats?.total_users || 0}</div></div>
         <div class="stat-card"><div class="stat-card-label">Total Vues</div><div class="stat-card-value">${stats?.total_views || 0}</div></div>
         <div class="stat-card"><div class="stat-card-label">Épisodes</div><div class="stat-card-value">${stats?.total_episodes || 0}</div></div>`;
-    // Top animes
     const { data: top } = await db.from('animes').select('title,views').order('views', { ascending: false }).limit(5);
     const maxV = top?.[0]?.views || 1;
-    document.getElementById('topAnimes').innerHTML = top?.length ? top.map(a => `
-        <div class="chart-row"><div class="chart-label" title="${esc(a.title)}">${esc(a.title)}</div><div class="chart-bar-wrap"><div class="progress"><div class="progress-fill" style="width:${((a.views||0)/maxV*100).toFixed(0)}%"></div></div></div><div class="chart-val">${a.views||0}</div></div>
-    `).join('') : '<p class="empty" style="padding:1rem">Aucune vue</p>';
-    // Recent users
+    document.getElementById('topAnimes').innerHTML = top?.length ? top.map(a => `<div class="chart-row"><div class="chart-label" title="${esc(a.title)}">${esc(a.title)}</div><div class="chart-bar-wrap"><div class="progress"><div class="progress-fill" style="width:${((a.views||0)/maxV*100).toFixed(0)}%"></div></div></div><div class="chart-val">${a.views||0}</div></div>`).join('') : '<p style="color:var(--text2);">Aucune vue</p>';
     const { data: users } = await db.from('profiles').select('username,email,created_at').eq('role','user').order('created_at', { ascending: false }).limit(5);
-    document.getElementById('recentUsers').innerHTML = users?.length ? users.map(u => `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0;border-bottom:1px solid var(--border);">
-            <div><div style="font-weight:600;font-size:0.875rem;">${esc(u.username)}</div><div style="font-size:0.72rem;color:var(--text2);">${esc(u.email)}</div></div>
-            <span class="pill pill-purple">${new Date(u.created_at).toLocaleDateString('fr-FR')}</span>
-        </div>
-    `).join('') : '<p style="color:var(--text2);font-size:0.875rem;">Aucun utilisateur</p>';
-    // Recent animes
+    document.getElementById('recentUsers').innerHTML = users?.length ? users.map(u => `<div style="display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0;border-bottom:1px solid var(--border);"><div><div style="font-weight:600;font-size:0.875rem;">${esc(u.username)}</div><div style="font-size:0.72rem;color:var(--text2);">${esc(u.email)}</div></div><span class="pill pill-purple">${new Date(u.created_at).toLocaleDateString('fr-FR')}</span></div>`).join('') : '<p style="color:var(--text2);">Aucun utilisateur</p>';
     const { data: recent } = await db.from('animes').select('id,title,type,genre,views').order('created_at', { ascending: false }).limit(5);
-    document.getElementById('dashAnimeTable').innerHTML = recent?.length ? recent.map(a => `
-        <tr>
-            <td><strong>${esc(a.title)}</strong></td>
-            <td><span class="pill ${a.type==='serie'?'pill-purple':'pill-yellow'}">${a.type==='serie'?'SÉRIE':'FILM'}</span></td>
-            <td>${esc(a.genre||'—')}</td>
-            <td>${a.views||0}</td>
-            <td>
-                <button class="btn btn-ghost btn-sm" onclick="editAnime('${a.id}')">Modifier</button>
-                <button class="btn btn-danger btn-sm" onclick="confirmDelete('${a.id}')" style="margin-left:0.4rem;">Supprimer</button>
-            </td>
-        </tr>
-    `).join('') : '<tr><td colspan="5" class="empty"><p>Aucun anime</p></td></tr>';
+    document.getElementById('dashAnimeTable').innerHTML = recent?.length ? recent.map(a => `<tr><td><strong>${esc(a.title)}</strong></td><td><span class="pill ${a.type==='serie'?'pill-purple':'pill-yellow'}">${a.type==='serie'?'SÉRIE':'FILM'}</span></td><td>${esc(a.genre||'—')}</td><td>${a.views||0}</td><td><button class="btn btn-ghost btn-sm" onclick="editAnime('${a.id}')">Modifier</button><button class="btn btn-danger btn-sm" onclick="confirmDelete('${a.id}')">Supprimer</button></td></tr>`).join('') : '<tr><td colspan="5" class="empty"><p>Aucun anime</p></td></tr>';
 }
 
-// ---- ANIME LIST ----
-async function loadAnimeList(filter = '', typeF = animeTypeFilterVal) {
-    document.getElementById('animeListTable').innerHTML = '<tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr>';
-    document.getElementById('animeListEmpty').style.display = 'none';
-    let query = db.from('animes').select('id,title,type,genre,views,vostfr_stream,vf_stream').order('created_at', { ascending: false });
-    if (typeF !== 'all') query = query.eq('type', typeF);
-    if (filter) query = query.ilike('title', `%${filter}%`);
-    const { data: animes } = await query;
-    allAnimesCache = animes || [];
-    if (!animes?.length) {
+// ======================= ANIMES =======================
+async function loadAnimesPage() {
+    const state = pageState.animes;
+    let query = db.from('animes').select('*', { count: 'exact' });
+    if (animeTypeFilterVal !== 'all') query = query.eq('type', animeTypeFilterVal);
+    const search = document.querySelector('#sec-animes .search-input')?.value.trim();
+    if (search) query = query.ilike('title', `%${search}%`);
+    if (state.sort) query = query.order(state.sort, { ascending: state.asc });
+    const from = state.page * state.size, to = from + state.size - 1;
+    const { data, count } = await query.range(from, to);
+    if (!data?.length) {
         document.getElementById('animeListTable').innerHTML = '';
         document.getElementById('animeListEmpty').style.display = 'block';
+        document.getElementById('animePagination').innerHTML = '';
         return;
     }
-    const animeIds = animes.map(a => a.id);
+    document.getElementById('animeListEmpty').style.display = 'none';
+    // Compteurs saisons/épisodes/langues
+    const animeIds = data.map(a => a.id);
     const { data: seasons } = await db.from('seasons').select('anime_id').in('anime_id', animeIds);
     const { data: episodes } = await db.from('episodes').select('anime_id,vostfr_stream,vf_stream').in('anime_id', animeIds);
-    const seasonCounts = {}, epCounts = {}, hasVostfr = {}, hasVf = {};
-    (seasons || []).forEach(s => { seasonCounts[s.anime_id] = (seasonCounts[s.anime_id] || 0) + 1; });
-    (episodes || []).forEach(e => {
-        epCounts[e.anime_id] = (epCounts[e.anime_id] || 0) + 1;
-        if (e.vostfr_stream) hasVostfr[e.anime_id] = true;
-        if (e.vf_stream) hasVf[e.anime_id] = true;
+    const sc = {}, ec = {}, hv = {}, hf = {};
+    (seasons||[]).forEach(s => { sc[s.anime_id] = (sc[s.anime_id]||0)+1; });
+    (episodes||[]).forEach(e => { ec[e.anime_id] = (ec[e.anime_id]||0)+1; if(e.vostfr_stream) hv[e.anime_id]=true; if(e.vf_stream) hf[e.anime_id]=true; });
+    document.getElementById('animeListTable').innerHTML = data.map(a => `<tr>
+        <td><strong>${esc(a.title)}</strong></td>
+        <td><span class="pill ${a.type==='serie'?'pill-purple':'pill-yellow'}">${a.type==='serie'?'SÉRIE':'FILM'}</span></td>
+        <td>${esc(a.genre||'—')}</td>
+        <td>${a.type==='serie'?(sc[a.id]||0):'—'}</td>
+        <td>${a.type==='serie'?(ec[a.id]||0):'1'}</td>
+        <td>${(a.vostfr_stream||hv[a.id])?'<span class="pill pill-purple">VOSTFR</span> ':''}${(a.vf_stream||hf[a.id])?'<span class="pill pill-green">VF</span>':''}</td>
+        <td>${a.views||0}</td>
+        <td>
+            <button class="btn btn-ghost btn-sm" onclick="editAnime('${a.id}')">Modifier</button>
+            <button class="btn btn-ghost btn-sm" onclick="duplicateAnime('${a.id}')">Dupliquer</button>
+            <button class="btn btn-danger btn-sm" onclick="confirmDelete('${a.id}')">Supprimer</button>
+        </td></tr>`).join('');
+    const totalPages = Math.ceil(count / state.size);
+    document.getElementById('animePagination').innerHTML = `
+        <button ${state.page===0?'disabled':''} onclick="changePage(${state.page-1})">‹ Précédent</button>
+        <span class="page-info">${state.page+1} / ${totalPages} (${count})</span>
+        <button ${state.page+1>=totalPages?'disabled':''} onclick="changePage(${state.page+1})">Suivant ›</button>`;
+}
+function changePage(newPage) { pageState.animes.page = newPage; loadAnimesPage(); }
+function filterAnimes(val) { loadAnimesPage(); }
+function filterAnimeType(val) { animeTypeFilterVal = val; loadAnimesPage(); }
+document.querySelectorAll('#animeTable th[data-sort]').forEach(th => {
+    th.addEventListener('click', () => {
+        const sort = th.dataset.sort;
+        if (pageState.animes.sort === sort) pageState.animes.asc = !pageState.animes.asc;
+        else { pageState.animes.sort = sort; pageState.animes.asc = true; }
+        document.querySelectorAll('#animeTable th').forEach(h => h.classList.remove('sorted'));
+        th.classList.add('sorted');
+        loadAnimesPage();
     });
-    document.getElementById('animeListTable').innerHTML = animes.map(a => `
-        <tr>
-            <td><strong>${esc(a.title)}</strong></td>
-            <td><span class="pill ${a.type==='serie'?'pill-purple':'pill-yellow'}">${a.type==='serie'?'SÉRIE':'FILM'}</span></td>
-            <td>${esc(a.genre||'—')}</td>
-            <td>${a.type==='serie'?(seasonCounts[a.id]||0):'—'}</td>
-            <td>${a.type==='serie'?(epCounts[a.id]||0):'1'}</td>
-            <td>${(a.vostfr_stream||hasVostfr[a.id])?'<span class="pill pill-purple" style="margin-right:0.3rem;">VOSTFR</span>':''}${(a.vf_stream||hasVf[a.id])?'<span class="pill pill-green">VF</span>':''}</td>
-            <td>${a.views||0}</td>
-            <td>
-                <button class="btn btn-ghost btn-sm" onclick="editAnime('${a.id}')">Modifier</button>
-                <button class="btn btn-danger btn-sm" onclick="confirmDelete('${a.id}')" style="margin-left:0.4rem;">Supprimer</button>
-            </td>
-        </tr>
-    `).join('');
-}
-function filterAnimes(val) { loadAnimeList(val, animeTypeFilterVal); }
-function filterAnimeType(val) { animeTypeFilterVal = val; loadAnimeList('', val); }
+});
 
+async function duplicateAnime(id) {
+    const { data } = await db.from('animes').select('*').eq('id', id).single();
+    if (!data) return;
+    const newData = { ...data }; delete newData.id; delete newData.created_at; delete newData.updated_at;
+    newData.title = (newData.title||'') + ' (copie)';
+    editingAnimeId = null; document.getElementById('addAnimeTitle').textContent = 'Ajouter un Anime (dupliqué)';
+    fillAnimeForm(newData); goSection('add-anime');
+    document.getElementById('af-title').value = newData.title;
+    toast('Anime dupliqué, modifiez et sauvegardez.', 'ok');
+}
+function fillAnimeForm(anime) {
+    document.getElementById('af-title').value = anime.title || '';
+    document.getElementById('af-type').value = anime.type || 'serie';
+    document.getElementById('af-genre').value = anime.genre || '';
+    document.getElementById('af-rating').value = anime.rating || '';
+    document.getElementById('af-poster').value = anime.poster_url || '';
+    document.getElementById('af-description').value = anime.description || '';
+    toggleTypeFields();
+    if (anime.type === 'film') {
+        document.getElementById('film-vostfr-stream').value = anime.vostfr_stream || '';
+        document.getElementById('film-vostfr-dl').value = anime.vostfr_download || '';
+        document.getElementById('film-vf-stream').value = anime.vf_stream || '';
+        document.getElementById('film-vf-dl').value = anime.vf_download || '';
+    }
+}
+
+// ======================= FORMULAIRE ANIME =======================
 function toggleTypeFields() {
-    const type = document.getElementById('af-type').value;
-    document.getElementById('filmFields').style.display = type === 'film' ? 'block' : 'none';
-    document.getElementById('serieFields').style.display = type === 'serie' ? 'block' : 'none';
+    document.getElementById('filmFields').style.display = document.getElementById('af-type').value === 'film' ? 'block' : 'none';
+    document.getElementById('serieFields').style.display = document.getElementById('af-type').value === 'serie' ? 'block' : 'none';
 }
-
-// ---- SEASON / EPISODE UI (identique) ----
 function addSeasonUI() {
     const idx = seasonUICount++;
     episodeUICounters[idx] = 0;
     document.getElementById('noSeasons').style.display = 'none';
     const div = document.createElement('div');
-    div.className = 'season-card';
-    div.id = `season-${idx}`;
-    div.innerHTML = `
-        <div class="season-card-header">
-            <span class="season-card-title">Saison ${idx + 1}</span>
-            <button type="button" class="btn btn-danger btn-sm" onclick="removeSeasonUI(${idx})">SUPPRIMER</button>
-        </div>
+    div.className = 'season-card'; div.id = `season-${idx}`;
+    div.innerHTML = `<div class="season-card-header"><span class="season-card-title">Saison ${idx+1}</span><button type="button" class="btn btn-danger btn-sm" onclick="removeSeasonUI(${idx})">SUPPRIMER</button></div>
         <div class="form-field" style="margin-bottom:1rem;"><label>Nom de la saison</label><input type="text" id="s${idx}-name" placeholder="Saison 1, Partie 1, etc."></div>
-        <div id="eps-${idx}"></div>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="addEpisodeUI(${idx})" style="margin-top:0.5rem;">+ ÉPISODE</button>`;
+        <div id="eps-${idx}"></div><button type="button" class="btn btn-ghost btn-sm" onclick="addEpisodeUI(${idx})" style="margin-top:0.5rem;">+ ÉPISODE</button>`;
     document.getElementById('seasonsContainer').appendChild(div);
 }
 function removeSeasonUI(idx) {
@@ -596,40 +575,21 @@ function addEpisodeUI(si) {
     if (!episodeUICounters[si]) episodeUICounters[si] = 0;
     const ei = episodeUICounters[si]++;
     const div = document.createElement('div');
-    div.className = 'episode-row';
-    div.id = `ep-${si}-${ei}`;
-    div.innerHTML = `
-        <div class="episode-row-header"><span>Épisode ${ei + 1}</span><button type="button" class="btn btn-danger btn-sm" onclick="removeEpisodeUI(${si},${ei})">RETIRER</button></div>
-        <div class="form-grid" style="margin-bottom:0.75rem;">
-            <div class="form-field"><label>Numéro</label><input type="number" id="ep${si}-${ei}-num" min="1" value="${ei+1}"></div>
-            <div class="form-field"><label>Titre (optionnel)</label><input type="text" id="ep${si}-${ei}-title" placeholder="Sans titre"></div>
-        </div>
-        <div class="lang-block" style="margin-bottom:0.75rem;">
-            <div class="lang-block-title">🇯🇵 VOSTFR</div>
-            <div class="form-grid">
-                <div class="form-field"><label>Lien Lecteur</label><input type="url" id="ep${si}-${ei}-vostfr-stream" placeholder="https://doodstream.com/d/..."></div>
-                <div class="form-field"><label>Lien Téléchargement</label><input type="url" id="ep${si}-${ei}-vostfr-dl" placeholder="https://doodstream.com/d/..."></div>
-            </div>
-        </div>
-        <div class="lang-block">
-            <div class="lang-block-title">🇫🇷 VF</div>
-            <div class="form-grid">
-                <div class="form-field"><label>Lien Lecteur</label><input type="url" id="ep${si}-${ei}-vf-stream" placeholder="https://doodstream.com/d/..."></div>
-                <div class="form-field"><label>Lien Téléchargement</label><input type="url" id="ep${si}-${ei}-vf-dl" placeholder="https://doodstream.com/d/..."></div>
-            </div>
-        </div>`;
+    div.className = 'episode-row'; div.id = `ep-${si}-${ei}`;
+    div.innerHTML = `<div class="episode-row-header"><span>Épisode ${ei+1}</span><button type="button" class="btn btn-danger btn-sm" onclick="removeEpisodeUI(${si},${ei})">RETIRER</button></div>
+        <div class="form-grid" style="margin-bottom:0.75rem;"><div class="form-field"><label>Numéro</label><input type="number" id="ep${si}-${ei}-num" min="1" value="${ei+1}"></div><div class="form-field"><label>Titre</label><input type="text" id="ep${si}-${ei}-title" placeholder="Sans titre"></div></div>
+        <div class="lang-block" style="margin-bottom:0.75rem;"><div class="lang-block-title">🇯🇵 VOSTFR</div><div class="form-grid"><div class="form-field"><label>Lien Lecteur</label><input type="url" id="ep${si}-${ei}-vostfr-stream"></div><div class="form-field"><label>Lien Téléchargement</label><input type="url" id="ep${si}-${ei}-vostfr-dl"></div></div></div>
+        <div class="lang-block"><div class="lang-block-title">🇫🇷 VF</div><div class="form-grid"><div class="form-field"><label>Lien Lecteur</label><input type="url" id="ep${si}-${ei}-vf-stream"></div><div class="form-field"><label>Lien Téléchargement</label><input type="url" id="ep${si}-${ei}-vf-dl"></div></div></div>`;
     document.getElementById(`eps-${si}`).appendChild(div);
 }
 function removeEpisodeUI(si, ei) { document.getElementById(`ep-${si}-${ei}`)?.remove(); }
 
-// ---- SUBMIT ANIME ----
 async function submitAnime(e) {
     e.preventDefault();
     const type = document.getElementById('af-type').value;
     const title = document.getElementById('af-title').value.trim();
     if (!title) { toast('Le titre est obligatoire', 'err'); return; }
-    const btn = document.getElementById('saveAnimeBtn');
-    btn.disabled = true; btn.textContent = 'Sauvegarde...';
+    const btn = document.getElementById('saveAnimeBtn'); btn.disabled = true; btn.textContent = 'Sauvegarde...';
     const animeData = {
         title, type,
         genre: document.getElementById('af-genre').value.trim() || null,
@@ -647,110 +607,67 @@ async function submitAnime(e) {
     let animeId = editingAnimeId;
     try {
         if (editingAnimeId) {
-            const { error } = await db.from('animes').update(animeData).eq('id', editingAnimeId);
-            if (error) throw error;
+            await db.from('animes').update(animeData).eq('id', editingAnimeId);
+            await db.from('seasons').delete().eq('anime_id', editingAnimeId);
         } else {
             const { data, error } = await db.from('animes').insert(animeData).select().single();
             if (error) throw error;
             animeId = data.id;
         }
         if (type === 'serie') {
-            if (editingAnimeId) await db.from('seasons').delete().eq('anime_id', editingAnimeId);
             const seasonEls = document.querySelectorAll('.season-card');
             for (let sRelIdx = 0; sRelIdx < seasonEls.length; sRelIdx++) {
-                const sEl = seasonEls[sRelIdx];
-                const sid = sEl.id.split('-')[1];
-                const sName = document.getElementById(`s${sid}-name`)?.value.trim() || `Saison ${sRelIdx + 1}`;
-                const { data: seasonData, error: sErr } = await db.from('seasons').insert({ anime_id: animeId, name: sName, season_number: sRelIdx + 1 }).select().single();
+                const sEl = seasonEls[sRelIdx]; const sid = sEl.id.split('-')[1];
+                const sName = document.getElementById(`s${sid}-name`)?.value.trim() || `Saison ${sRelIdx+1}`;
+                const { data: seasonData, error: sErr } = await db.from('seasons').insert({ anime_id: animeId, name: sName, season_number: sRelIdx+1 }).select().single();
                 if (sErr) throw sErr;
                 const epEls = sEl.querySelectorAll('.episode-row');
                 for (let epEl of epEls) {
-                    const parts = epEl.id.split('-');
-                    const si2 = parts[1], ei = parts[2];
-                    const vs = document.getElementById(`ep${si2}-${ei}-vostfr-stream`)?.value.trim();
-                    const vd = document.getElementById(`ep${si2}-${ei}-vostfr-dl`)?.value.trim();
-                    const fs = document.getElementById(`ep${si2}-${ei}-vf-stream`)?.value.trim();
-                    const fd = document.getElementById(`ep${si2}-${ei}-vf-dl`)?.value.trim();
+                    const parts = epEl.id.split('-'); const si2 = parts[1], ei = parts[2];
                     await db.from('episodes').insert({
                         season_id: seasonData.id, anime_id: animeId,
                         episode_number: parseInt(document.getElementById(`ep${si2}-${ei}-num`)?.value) || 1,
                         title: document.getElementById(`ep${si2}-${ei}-title`)?.value.trim() || null,
-                        vostfr_stream: vs || null, vostfr_download: vd || null,
-                        vf_stream: fs || null, vf_download: fd || null,
+                        vostfr_stream: document.getElementById(`ep${si2}-${ei}-vostfr-stream`)?.value.trim() || null,
+                        vostfr_download: document.getElementById(`ep${si2}-${ei}-vostfr-dl`)?.value.trim() || null,
+                        vf_stream: document.getElementById(`ep${si2}-${ei}-vf-stream`)?.value.trim() || null,
+                        vf_download: document.getElementById(`ep${si2}-${ei}-vf-dl`)?.value.trim() || null,
                     });
                 }
             }
         }
         toast(editingAnimeId ? 'Anime modifié !' : 'Anime ajouté !', 'ok');
-        resetAnimeForm();
-        goSection('animes');
+        formIsDirty = false; resetAnimeForm(); goSection('animes');
     } catch (err) { toast('Erreur : ' + err.message, 'err'); }
     btn.disabled = false; btn.textContent = 'SAUVEGARDER';
 }
 
-// ---- EDIT ANIME ----
 async function editAnime(id) {
-    editingAnimeId = id;
-    resetAnimeForm(false);
-    document.getElementById('addAnimeTitle').textContent = 'Modifier un Anime';
-    document.getElementById('af-id').value = id;
+    editingAnimeId = id; resetAnimeForm(false);
+    document.getElementById('addAnimeTitle').textContent = 'Modifier un Anime'; document.getElementById('af-id').value = id;
     const { data: anime } = await db.from('animes').select('*').eq('id', id).single();
     if (!anime) return;
-    document.getElementById('af-title').value = anime.title || '';
-    document.getElementById('af-type').value = anime.type || 'serie';
-    document.getElementById('af-genre').value = anime.genre || '';
-    document.getElementById('af-rating').value = anime.rating || '';
-    document.getElementById('af-poster').value = anime.poster_url || '';
-    document.getElementById('af-description').value = anime.description || '';
-    toggleTypeFields();
-    if (anime.type === 'film') {
-        document.getElementById('film-vostfr-stream').value = anime.vostfr_stream || '';
-        document.getElementById('film-vostfr-dl').value = anime.vostfr_download || '';
-        document.getElementById('film-vf-stream').value = anime.vf_stream || '';
-        document.getElementById('film-vf-dl').value = anime.vf_download || '';
-    } else {
+    fillAnimeForm(anime); if (anime.poster_url) previewPoster(anime.poster_url); toggleTypeFields();
+    if (anime.type === 'serie') {
         const { data: seasons } = await db.from('seasons').select('*').eq('anime_id', id).order('season_number');
-        const seasonIds = (seasons || []).map(s => s.id);
+        const seasonIds = (seasons||[]).map(s => s.id);
         const { data: episodes } = seasonIds.length ? await db.from('episodes').select('*').in('season_id', seasonIds).order('episode_number') : { data: [] };
-        for (const season of (seasons || [])) {
-            const sid = seasonUICount;
-            episodeUICounters[sid] = 0; seasonUICount++;
+        for (const season of (seasons||[])) {
+            const sid = seasonUICount; episodeUICounters[sid] = 0; seasonUICount++;
             document.getElementById('noSeasons').style.display = 'none';
-            const sDiv = document.createElement('div');
-            sDiv.className = 'season-card';
-            sDiv.id = `season-${sid}`;
-            sDiv.innerHTML = `
-                <div class="season-card-header"><span class="season-card-title">Saison ${season.season_number}</span><button type="button" class="btn btn-danger btn-sm" onclick="removeSeasonUI(${sid})">SUPPRIMER</button></div>
+            const sDiv = document.createElement('div'); sDiv.className = 'season-card'; sDiv.id = `season-${sid}`;
+            sDiv.innerHTML = `<div class="season-card-header"><span class="season-card-title">Saison ${season.season_number}</span><button type="button" class="btn btn-danger btn-sm" onclick="removeSeasonUI(${sid})">SUPPRIMER</button></div>
                 <div class="form-field" style="margin-bottom:1rem;"><label>Nom de la saison</label><input type="text" id="s${sid}-name" value="${esc(season.name)}"></div>
-                <div id="eps-${sid}"></div>
-                <button type="button" class="btn btn-ghost btn-sm" onclick="addEpisodeUI(${sid})" style="margin-top:0.5rem;">+ ÉPISODE</button>`;
+                <div id="eps-${sid}"></div><button type="button" class="btn btn-ghost btn-sm" onclick="addEpisodeUI(${sid})" style="margin-top:0.5rem;">+ ÉPISODE</button>`;
             document.getElementById('seasonsContainer').appendChild(sDiv);
-            const sEps = (episodes || []).filter(ep => ep.season_id === season.id);
+            const sEps = (episodes||[]).filter(ep => ep.season_id === season.id);
             for (const ep of sEps) {
                 const ei = episodeUICounters[sid]; episodeUICounters[sid]++;
-                const epDiv = document.createElement('div');
-                epDiv.className = 'episode-row';
-                epDiv.id = `ep-${sid}-${ei}`;
-                epDiv.innerHTML = `
-                    <div class="episode-row-header"><span>Épisode ${ep.episode_number}</span><button type="button" class="btn btn-danger btn-sm" onclick="removeEpisodeUI(${sid},${ei})">RETIRER</button></div>
-                    <div class="form-grid" style="margin-bottom:0.75rem;">
-                        <div class="form-field"><label>Numéro</label><input type="number" id="ep${sid}-${ei}-num" min="1" value="${ep.episode_number}"></div>
-                        <div class="form-field"><label>Titre (optionnel)</label><input type="text" id="ep${sid}-${ei}-title" value="${esc(ep.title||'')}"></div>
-                    </div>
-                    <div class="lang-block" style="margin-bottom:0.75rem;">
-                        <div class="lang-block-title">🇯🇵 VOSTFR</div>
-                        <div class="form-grid">
-                            <div class="form-field"><label>Lien Lecteur</label><input type="url" id="ep${sid}-${ei}-vostfr-stream" value="${esc(ep.vostfr_stream||'')}"></div>
-                            <div class="form-field"><label>Lien Téléchargement</label><input type="url" id="ep${sid}-${ei}-vostfr-dl" value="${esc(ep.vostfr_download||'')}"></div>
-                        </div>
-                    </div>
-                    <div class="lang-block">
-                        <div class="lang-block-title">🇫🇷 VF</div>
-                        <div class="form-grid">
-                            <div class="form-field"><label>Lien Lecteur</label><input type="url" id="ep${sid}-${ei}-vf-stream" value="${esc(ep.vf_stream||'')}"></div>
-                            <div class="form-field"><label>Lien Téléchargement</label><input type="url" id="ep${sid}-${ei}-vf-dl" value="${esc(ep.vf_download||'')}"></div>
-                        </div>
-                    </div>`;
+                const epDiv = document.createElement('div'); epDiv.className = 'episode-row'; epDiv.id = `ep-${sid}-${ei}`;
+                epDiv.innerHTML = `<div class="episode-row-header"><span>Épisode ${ep.episode_number}</span><button type="button" class="btn btn-danger btn-sm" onclick="removeEpisodeUI(${sid},${ei})">RETIRER</button></div>
+                    <div class="form-grid" style="margin-bottom:0.75rem;"><div class="form-field"><label>Numéro</label><input type="number" id="ep${sid}-${ei}-num" min="1" value="${ep.episode_number}"></div><div class="form-field"><label>Titre</label><input type="text" id="ep${sid}-${ei}-title" value="${esc(ep.title||'')}"></div></div>
+                    <div class="lang-block" style="margin-bottom:0.75rem;"><div class="lang-block-title">🇯🇵 VOSTFR</div><div class="form-grid"><div class="form-field"><label>Lien Lecteur</label><input type="url" id="ep${sid}-${ei}-vostfr-stream" value="${esc(ep.vostfr_stream||'')}"></div><div class="form-field"><label>Lien Téléchargement</label><input type="url" id="ep${sid}-${ei}-vostfr-dl" value="${esc(ep.vostfr_download||'')}"></div></div></div>
+                    <div class="lang-block"><div class="lang-block-title">🇫🇷 VF</div><div class="form-grid"><div class="form-field"><label>Lien Lecteur</label><input type="url" id="ep${sid}-${ei}-vf-stream" value="${esc(ep.vf_stream||'')}"></div><div class="form-field"><label>Lien Téléchargement</label><input type="url" id="ep${sid}-${ei}-vf-dl" value="${esc(ep.vf_download||'')}"></div></div></div>`;
                 document.getElementById(`eps-${sid}`).appendChild(epDiv);
             }
         }
@@ -760,65 +677,73 @@ async function editAnime(id) {
 
 function resetAnimeForm(clearId = true) {
     if (clearId) editingAnimeId = null;
-    seasonUICount = 0; episodeUICounters = {};
+    seasonUICount = 0; episodeUICounters = {}; formIsDirty = false;
     document.getElementById('animeForm').reset();
     document.getElementById('seasonsContainer').innerHTML = '';
     document.getElementById('noSeasons').style.display = 'block';
+    document.getElementById('posterPreview')?.classList.remove('show');
     toggleTypeFields();
 }
-
 function confirmDelete(id) {
     document.getElementById('confirmTitle').textContent = 'Supprimer cet anime ?';
-    document.getElementById('confirmMsg').textContent = 'Cette action est irréversible.';
+    document.getElementById('confirmMsg').textContent = 'Action irréversible.';
+    document.getElementById('confirmInputWrap').style.display = 'block';
+    document.getElementById('confirmTextInput').value = '';
     document.getElementById('confirmOkBtn').onclick = async () => {
+        if (document.getElementById('confirmTextInput').value !== 'SUPPRIMER') { toast('Tapez SUPPRIMER', 'err'); return; }
         await db.from('animes').delete().eq('id', id);
-        closeModal('confirmModal');
-        toast('Anime supprimé', 'ok');
-        loadAnimeList(); renderDashboard();
+        closeModal('confirmModal'); toast('Anime supprimé', 'ok');
+        loadAnimesPage(); renderDashboard();
     };
     document.getElementById('confirmModal').classList.add('open');
 }
 
-// ---- ANALYTICS (identique) ----
+// ======================= ANALYTICS =======================
+let genreChartInstance = null, viewsChartInstance = null;
 async function renderAnalytics() {
     const { data: stats } = await db.rpc('get_admin_stats');
     const { data: animes } = await db.from('animes').select('id,title,views,genre').order('views', { ascending: false });
-    const { data: users } = await db.from('profiles').select('username,history,favorites,watchlist').eq('role', 'user');
-    const totalViews = (animes || []).reduce((s, a) => s + (a.views || 0), 0);
-    const avgFav = users?.length ? ((users.reduce((s, u) => s + (u.favorites?.length || 0), 0)) / users.length).toFixed(1) : 0;
+    const { data: users } = await db.from('profiles').select('username,history,favorites,watchlist').eq('role','user');
+    const totalViews = (animes||[]).reduce((s, a) => s + (a.views||0), 0);
     document.getElementById('analyticsStats').innerHTML = `
         <div class="stat-card"><div class="stat-card-label">Total Vues</div><div class="stat-card-value">${totalViews}</div></div>
-        <div class="stat-card"><div class="stat-card-label">Utilisateurs</div><div class="stat-card-value">${users?.length || 0}</div></div>
-        <div class="stat-card"><div class="stat-card-label">Moy. Favoris</div><div class="stat-card-value">${avgFav}</div></div>
-        <div class="stat-card"><div class="stat-card-label">Animes</div><div class="stat-card-value">${animes?.length || 0}</div></div>`;
-    const top10 = (animes || []).slice(0, 10);
-    const maxV = top10[0]?.views || 1;
-    document.getElementById('analyticsTopAnimes').innerHTML = top10.length ? top10.map(a => `
-        <div class="chart-row"><div class="chart-label" title="${esc(a.title)}">${esc(a.title)}</div><div class="chart-bar-wrap"><div class="progress"><div class="progress-fill" style="width:${((a.views||0)/maxV*100).toFixed(0)}%"></div></div></div><div class="chart-val">${a.views||0}</div></div>
-    `).join('') : '<p class="empty">Pas de données</p>';
-    const genreMap = {};
-    (animes || []).forEach(a => { (a.genre||'').split(',').forEach(g => { g=g.trim(); if(g) genreMap[g]=(genreMap[g]||0)+1; }); });
-    const genres = Object.entries(genreMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
-    const maxG = genres[0]?.[1] || 1;
-    document.getElementById('analyticsGenres').innerHTML = genres.length ? genres.map(([g,c]) => `
-        <div class="chart-row"><div class="chart-label">${esc(g)}</div><div class="chart-bar-wrap"><div class="progress"><div class="progress-fill" style="width:${(c/maxG*100).toFixed(0)}%"></div></div></div><div class="chart-val">${c}</div></div>
-    `).join('') : '<p class="empty">Aucun genre</p>';
-    const sorted = (users||[]).sort((a,b)=>(b.history?.length||0)-(a.history?.length||0));
-    document.getElementById('analyticsUsers').innerHTML = sorted.map(u => {
-        const score = (u.history?.length||0)*3 + (u.favorites?.length||0)*2 + (u.watchlist?.length||0);
-        return `<tr><td><strong>${esc(u.username)}</strong></td><td>${u.history?.length||0}</td><td>${u.favorites?.length||0}</td><td>${u.watchlist?.length||0}</td><td><span class="pill pill-purple">${score} pts</span></td></tr>`;
-    }).join('') || '<tr><td colspan="5" class="empty"><p>Aucun utilisateur</p></td></tr>';
+        <div class="stat-card"><div class="stat-card-label">Utilisateurs</div><div class="stat-card-value">${users?.length||0}</div></div>
+        <div class="stat-card"><div class="stat-card-label">Animes</div><div class="stat-card-value">${animes?.length||0}</div></div>
+        <div class="stat-card"><div class="stat-card-label">Épisodes</div><div class="stat-card-value">${stats?.total_episodes||0}</div></div>`;
+    const top10 = (animes||[]).slice(0,10); const maxV = top10[0]?.views || 1;
+    document.getElementById('analyticsTopAnimes').innerHTML = top10.length ? top10.map(a => `<div class="chart-row"><div class="chart-label" title="${esc(a.title)}">${esc(a.title)}</div><div class="chart-bar-wrap"><div class="progress"><div class="progress-fill" style="width:${((a.views||0)/maxV*100).toFixed(0)}%"></div></div></div><div class="chart-val">${a.views||0}</div></div>`).join('') : 'Aucune donnée';
+    const genreMap = {}; (animes||[]).forEach(a => (a.genre||'').split(',').forEach(g => { g=g.trim(); if(g) genreMap[g]=(genreMap[g]||0)+1; }));
+    const ctx = document.getElementById('genreChart')?.getContext('2d');
+    if (ctx) {
+        if (genreChartInstance) genreChartInstance.destroy();
+        genreChartInstance = new Chart(ctx, { type: 'doughnut', data: { labels: Object.keys(genreMap), datasets: [{ data: Object.values(genreMap), backgroundColor: ['#7c3aed','#a78bfa','#6d28d9','#5b21b6','#c4b5fd','#ede9fe','#22c55e','#f59e0b'] }] }, options: { plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8' } } } } });
+    }
+    const thirtyDaysAgo = new Date(Date.now()-30*86400000).toISOString();
+    const { data: dailyViews } = await db.from('views').select('created_at').gte(thirtyDaysAgo);
+    const viewsPerDay = {}; (dailyViews||[]).forEach(v => { const d = v.created_at.split('T')[0]; viewsPerDay[d] = (viewsPerDay[d]||0)+1; });
+    const dates = Object.keys(viewsPerDay).sort();
+    const ctx2 = document.getElementById('viewsChart')?.getContext('2d');
+    if (ctx2) {
+        if (viewsChartInstance) viewsChartInstance.destroy();
+        viewsChartInstance = new Chart(ctx2, { type: 'line', data: { labels: dates, datasets: [{ label: 'Vues', data: dates.map(d => viewsPerDay[d]), borderColor: '#7c3aed', tension: 0.3, fill: false }] }, options: { scales: { x: { ticks: { color: '#94a3b8' } }, y: { beginAtZero: true, ticks: { color: '#94a3b8' } } } } });
+    }
+    document.getElementById('analyticsUsers').innerHTML = (users||[]).sort((a,b)=>(b.history?.length||0)-(a.history?.length||0)).slice(0,20).map(u => `<tr><td><strong>${esc(u.username)}</strong></td><td>${u.history?.length||0}</td><td>${u.favorites?.length||0}</td><td>${u.watchlist?.length||0}</td><td>${(u.history?.length||0)*3+(u.favorites?.length||0)*2+(u.watchlist?.length||0)} pts</td></tr>`).join('');
 }
 
-// ---- MODAL / TOAST / UTILS ----
+// ======================= APERÇU AFFICHE =======================
+function previewPoster(url) {
+    const wrap = document.getElementById('posterPreview'), img = document.getElementById('posterPreviewImg');
+    if (!url || !url.startsWith('http')) { wrap.classList.remove('show'); return; }
+    img.src = url; img.onload = () => wrap.classList.add('show'); img.onerror = () => wrap.classList.remove('show');
+}
+
+// ======================= UTILS =======================
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 function toast(msg, type = '') {
-    const t = document.getElementById('toast');
-    t.textContent = msg; t.className = `toast ${type}`;
-    setTimeout(() => t.classList.add('show'), 10);
-    setTimeout(() => t.classList.remove('show'), 3200);
+    const t = document.getElementById('toast'); t.textContent = msg; t.className = `toast ${type}`;
+    setTimeout(() => t.classList.add('show'), 10); setTimeout(() => t.classList.remove('show'), 3200);
 }
-function esc(str) { return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function esc(str) { return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 </script>
 </body>
 </html>
