@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>G-WORLD - Anime Streaming VF & VOSTFR</title>
+    <meta name="description" content="Regardez vos animes préférés en VF et VOSTFR gratuitement">
+    <meta property="og:title" content="G-WORLD - Anime Streaming">
+    <meta property="og:description" content="Regardez vos animes préférés en VF et VOSTFR gratuitement">
+    <meta property="og:image" content="https://i.postimg.cc/bJd0LGMW/Video-Capture-20250809-145140.jpg">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#0c0a1a">
+    <link rel="manifest" id="manifestLink" href="data:application/json;base64,">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -18,6 +25,19 @@
             --border: rgba(139,92,246,0.25);
             --text: #ede9fe;
             --text2: #a5b4fc;
+            --skeleton-base: rgba(139,92,246,0.1);
+            --card-bg: #1b1736;
+        }
+
+        body.light {
+            --bg: #f4f0ff;
+            --bg2: #ffffff;
+            --bg3: #f0ebff;
+            --border: rgba(139,92,246,0.3);
+            --text: #1e1b4b;
+            --text2: #4c1d95;
+            --skeleton-base: #e9d5ff;
+            --card-bg: #ffffff;
         }
 
         body {
@@ -216,6 +236,7 @@
             transition: all 0.2s;
         }
         .genre-tag:hover { background: rgba(139,92,246,0.2); color: var(--primary-light); border-color: var(--primary); }
+        .genre-tag .count { opacity: 0.6; font-size: 0.65rem; margin-left: 0.25rem; }
 
         .main {
             margin-left: 240px;
@@ -226,8 +247,8 @@
         }
 
         .page { display: none; }
-        .page.active { display: block; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .page.active { display: block; animation: fadeSlideIn 0.3s ease; }
+        @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         .hero {
             background: linear-gradient(135deg, rgba(139,92,246,0.25) 0%, rgba(109,40,217,0.1) 100%);
@@ -241,7 +262,7 @@
         .hero h1 { font-size: 2.2rem; font-weight: 900; color: var(--primary-light); letter-spacing: 1px; margin-bottom: 0.5rem; }
         .hero p { color: var(--text2); font-size: 1rem; }
 
-        .section { margin-bottom: 2.5rem; }
+        .section { margin-bottom: 2.5rem; position: relative; }
         .section-head {
             display: flex;
             align-items: center;
@@ -253,22 +274,31 @@
         .section-head svg { width: 17px; height: 17px; color: var(--primary-light); }
         .section-head h2 { font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
 
-        .anime-grid {
-            display: flex;
-            flex-direction: row;
-            overflow-x: auto;
-            overflow-y: hidden;
-            gap: 0.8rem;
-            padding-bottom: 0.8rem;
-            scroll-behavior: smooth;
-            -webkit-overflow-scrolling: touch;
-            flex-wrap: nowrap;
-            width: 100%;
+        .carousel-container { position: relative; }
+        .carousel-scroll { display: flex; gap: 0.8rem; overflow-x: auto; padding-bottom: 0.8rem; scroll-behavior: smooth; }
+        .carousel-scroll::-webkit-scrollbar { height: 6px; }
+        .carousel-scroll::-webkit-scrollbar-track { background: rgba(139,92,246,0.05); border-radius: 3px; margin: 0 5px; }
+        .carousel-scroll::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 3px; }
+        .carousel-scroll { scrollbar-width: thin; scrollbar-color: var(--primary) rgba(139,92,246,0.05); }
+        .carousel-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            color: var(--text2);
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
         }
-        .anime-grid::-webkit-scrollbar { height: 6px; }
-        .anime-grid::-webkit-scrollbar-track { background: rgba(139,92,246,0.05); border-radius: 3px; margin: 0 5px; }
-        .anime-grid::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 3px; }
-        .anime-grid { scrollbar-width: thin; scrollbar-color: var(--primary) rgba(139,92,246,0.05); }
+        .carousel-container:hover .carousel-btn { display: flex; }
+        .carousel-btn.left { left: -10px; }
+        .carousel-btn.right { right: -10px; }
 
         .anime-grid-catalog {
             display: grid;
@@ -280,11 +310,11 @@
             cursor: pointer;
             border-radius: 0.75rem;
             overflow: hidden;
-            background: var(--bg3);
+            background: var(--card-bg);
             border: 1px solid var(--border);
             transition: all 0.3s;
-            flex: 0 0 120px;
-            width: 120px;
+            flex: 0 0 130px;
+            width: 130px;
         }
         .anime-card:hover {
             transform: translateY(-6px);
@@ -331,7 +361,7 @@
         .anime-card:hover .card-play { opacity: 1; transform: scale(1); }
         .card-info { padding: 0.5rem 0.6rem 0.6rem; }
         .card-title {
-            font-size: 0.75rem;
+            font-size: 0.78rem;
             font-weight: 600;
             color: var(--text);
             line-height: 1.3;
@@ -342,6 +372,36 @@
             -webkit-box-orient: vertical;
         }
         .card-genre { font-size: 0.65rem; color: var(--text2); margin-top: 0.2rem; }
+        .badge-new {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--primary);
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 0.15rem 0.4rem;
+            border-radius: 0.3rem;
+        }
+
+        /* Skeleton */
+        .skeleton-card {
+            background: var(--skeleton-base);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            flex: 0 0 130px;
+            width: 130px;
+        }
+        .skeleton-poster {
+            aspect-ratio: 2/3;
+            background: var(--skeleton-base);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        .skeleton-info { padding: 0.5rem 0.6rem; display: flex; flex-direction: column; gap: 0.4rem; }
+        .skeleton-line { height: 10px; background: var(--skeleton-base); border-radius: 4px; animation: pulse 1.5s ease-in-out infinite; }
+        .skeleton-line.short { width: 60%; }
+        @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
 
         .filter-bar { display: flex; gap: 0.6rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
         .f-btn {
@@ -354,7 +414,11 @@
             font-size: 0.8rem;
             font-weight: 500;
             transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
         }
+        .f-btn .cnt { font-size: 0.7rem; opacity: 0.7; }
         .f-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
         .f-btn:hover { border-color: var(--primary); color: var(--primary-light); }
 
@@ -684,15 +748,7 @@
         .btn-submit:hover { background: var(--primary-dark); }
         .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
 
-        .loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 3rem;
-            color: var(--text2);
-            font-size: 0.875rem;
-            gap: 0.75rem;
-        }
+        .loading { display: flex; align-items: center; justify-content: center; padding: 3rem; color: var(--text2); font-size: 0.875rem; gap: 0.75rem; }
         .spinner {
             width: 20px;
             height: 20px;
@@ -771,12 +827,22 @@
         .footer-about { font-size: 0.82rem; color: var(--text2); line-height: 1.7; }
         .footer-bottom { text-align: center; padding-top: 1.25rem; border-top: 1px solid var(--border); font-size: 0.78rem; color: var(--text2); }
 
+        .mode-toggle {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text2);
+            padding: 0.3rem 0.6rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
         @media (max-width: 900px) {
             .sidebar { transform: translateX(-100%); width: 260px; }
             .sidebar.open { transform: translateX(0); }
             .main { margin-left: 0; max-width: 100vw; padding: 1.25rem; }
             footer { margin-left: 0; }
-            .anime-grid .anime-card { flex: 0 0 95px; width: 95px; }
+            .anime-card { flex: 0 0 100px; width: 100px; }
             .detail-wrap { flex-direction: column; }
             .detail-poster { width: 100%; max-width: 170px; }
             .profile-stats { gap: 1rem; }
@@ -789,22 +855,13 @@
     </style>
 </head>
 <body>
-
-<script>
-    const SUPABASE_URL = 'https://cbevarkfzbpqcdwlhdxv.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNiZXZhcmtmemJwcWNkd2xoZHh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3MTczOTYsImV4cCI6MjA5MjI5MzM5Nn0.syrYiiyTcLshafsBUhJX1jzZFVLoET8z11T80qeNpis';
-    const { createClient } = supabase;
-    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-</script>
-
-<header>
+  <header>
     <div class="header-inner">
         <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Menu">
             <span></span><span></span><span></span>
         </button>
         <a class="logo" onclick="goPage('home')">
             <div class="logo-icon">
-                <!-- TON LOGO OFFICIEL -->
                 <img src="https://i.postimg.cc/bJd0LGMW/Video-Capture-20250809-145140.jpg" alt="G-WORLD" />
             </div>
             <span class="logo-text">G-WORLD</span>
@@ -814,6 +871,7 @@
             <input type="text" id="searchInput" placeholder="Rechercher un anime..." oninput="handleSearch(this.value)">
         </div>
         <div class="header-right">
+            <button class="mode-toggle" onclick="toggleTheme()">☀️/🌙</button>
             <button class="btn-auth" id="btnLogin" onclick="openAuth()">SE CONNECTER</button>
             <div class="user-chip" id="userChip">
                 <div class="user-avatar" id="userAvatar" onclick="goPage('profile')"></div>
@@ -894,9 +952,9 @@
                 <h2>Catalogue Complet</h2>
             </div>
             <div class="filter-bar" id="catalogFilters">
-                <button class="f-btn active" onclick="setCatalogFilter('all',event)">TOUS</button>
-                <button class="f-btn" onclick="setCatalogFilter('serie',event)">SÉRIES</button>
-                <button class="f-btn" onclick="setCatalogFilter('film',event)">FILMS</button>
+                <button class="f-btn active" onclick="setCatalogFilter('all',event)">TOUS <span class="cnt"></span></button>
+                <button class="f-btn" onclick="setCatalogFilter('serie',event)">SÉRIES <span class="cnt"></span></button>
+                <button class="f-btn" onclick="setCatalogFilter('film',event)">FILMS <span class="cnt"></span></button>
             </div>
             <div id="grid-catalog" class="anime-grid-catalog"><div class="loading"><div class="spinner"></div> Chargement...</div></div>
             <div class="empty-state" id="empty-catalog" style="display:none;">
@@ -946,8 +1004,7 @@
             </div>
             <div id="seasonsBlock"></div>
         </div>
-
-        <!-- PROFILE -->
+                <!-- PROFILE -->
         <div id="page-profile" class="page">
             <div class="profile-card">
                 <div class="profile-left">
@@ -1145,8 +1202,22 @@
 <div class="toast" id="toast"></div>
 <div id="sideOverlay" onclick="closeSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:70;"></div>
 
+<!-- ======================= JAVASCRIPT ======================= -->
 <script>
-const S = {
+// CONFIGURATION
+const CONFIG = {
+    SUPABASE_URL: 'https://cbevarkfzbpqcdwlhdxv.supabase.co',
+    SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNiZXZhcmtmemJwcWNkd2xoZHh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3MTczOTYsImV4cCI6MjA5MjI5MzM5Nn0.syrYiiyTcLshafsBUhJX1jzZFVLoET8z11T80qeNpis',
+    PAGE_SIZE: 12,
+    CACHE_TTL_MS: 120000,
+    VIEW_COOLDOWN_MS: 600000,
+    NEW_ANIME_DAYS: 7,
+};
+const { createClient } = supabase;
+const db = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+
+// ÉTAT GLOBAL
+const App = {
     user: null,
     profile: null,
     authMode: 'login',
@@ -1158,379 +1229,166 @@ const S = {
     seasons: [],
     episodes: [],
     catalogFilter: 'all',
+    catalogPage: 0,
+    catalogHasMore: true,
+    lastSearch: '',
+};
+let fullCatalogCache = null;
+
+// PWA
+(function setupPWA() {
+    const manifest = {
+        name: "G-WORLD Streaming",
+        short_name: "G-WORLD",
+        start_url: window.location.href.split('?')[0],
+        display: "standalone",
+        background_color: "#0c0a1a",
+        theme_color: "#8b5cf6",
+        icons: [{
+            src: "https://i.postimg.cc/bJd0LGMW/Video-Capture-20250809-145140.jpg",
+            sizes: "192x192",
+            type: "image/jpeg"
+        }]
+    };
+    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+    const manifestURL = URL.createObjectURL(blob);
+    document.getElementById('manifestLink').href = manifestURL;
+
+    if ('serviceWorker' in navigator) {
+        const swCode = `
+            const CACHE = 'gworld-v1';
+            self.addEventListener('install', e => { self.skipWaiting(); });
+            self.addEventListener('activate', e => e.waitUntil(clients.claim()));
+            self.addEventListener('fetch', e => {
+                e.respondWith(
+                    caches.match(e.request).then(resp => resp || fetch(e.request).then(response => {
+                        return caches.open(CACHE).then(cache => { cache.put(e.request, response.clone()); return response; });
+                    }))
+                );
+            });
+        `;
+        const swBlob = new Blob([swCode], { type: 'application/javascript' });
+        const swURL = URL.createObjectURL(swBlob);
+        navigator.serviceWorker.register(swURL).catch(() => {});
+    }
+})();
+
+// UTILITAIRES
+const toast = (msg, type = '') => {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${type}`;
+    setTimeout(() => t.classList.add('show'), 10);
+    setTimeout(() => t.classList.remove('show'), 3200);
+};
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+const localCache = new Map();
+const cacheGet = (key) => {
+    const entry = localCache.get(key);
+    if (!entry) return null;
+    if (Date.now() - entry.time > CONFIG.CACHE_TTL_MS) { localCache.delete(key); return null; }
+    return entry.data;
+};
+const cacheSet = (key, data) => localCache.set(key, { data, time: Date.now() });
+
+const safeDbCall = async (fn, fallback = null) => {
+    try {
+        return await fn();
+    } catch (e) {
+        if (e.message?.includes('fetch') || e.message?.includes('network') || e.status === 0) {
+            toast('Problème de connexion réseau', 'err');
+        }
+        return fallback;
+    }
 };
 
-document.addEventListener('DOMContentLoaded', async () => {
-    await initAuth();
-    await loadHome();
-    loadGenres();
-});
+const debounce = (fn, delay = 300) => {
+    let timer;
+    return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), delay); };
+};
 
+// MODE CLAIR
+function toggleTheme() {
+    document.body.classList.toggle('light');
+    localStorage.setItem('gworld_theme', document.body.classList.contains('light') ? 'light' : 'dark');
+}
+(function() {
+    if (localStorage.getItem('gworld_theme') === 'light') document.body.classList.add('light');
+})();
+
+// SKELETONS
+const skeletonCard = () => `
+    <div class="skeleton-card">
+        <div class="skeleton-poster"></div>
+        <div class="skeleton-info">
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line short"></div>
+        </div>
+    </div>`;
+const renderSkeletonGrid = (containerId, count = 8, isCatalog = false) => {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (isCatalog) {
+        el.className = 'anime-grid-catalog';
+        el.innerHTML = Array(count).fill(skeletonCard()).join('');
+    } else {
+        el.innerHTML = Array(count).fill(skeletonCard()).join('');
+    }
+};
+// ======================= AUTHENTIFICATION =======================
 async function initAuth() {
     const { data: { session } } = await db.auth.getSession();
     if (session?.user) {
-        S.user = session.user;
+        App.user = session.user;
         await loadProfile();
         updateHeader();
     }
     db.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
-            S.user = session.user;
+            App.user = session.user;
             await loadProfile();
             updateHeader();
         } else if (event === 'SIGNED_OUT') {
-            S.user = null;
-            S.profile = null;
+            App.user = null;
+            App.profile = null;
             updateHeader();
         }
     });
 }
-
 async function loadProfile() {
-    if (!S.user) return;
-    const { data } = await db.from('profiles').select('*').eq('id', S.user.id).single();
-    if (data) S.profile = data;
+    if (!App.user) return;
+    const { data } = await db.from('profiles').select('*').eq('id', App.user.id).single();
+    if (data) App.profile = data;
 }
-
-function goPage(page) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    const el = document.getElementById('page-' + page);
-    if (!el) return;
-    el.classList.add('active');
-    const nav = document.querySelector(`[data-page="${page}"]`);
-    if (nav) nav.classList.add('active');
-    if (page === 'home') loadHome();
-    else if (page === 'catalog') loadCatalog();
-    else if (page === 'profile') {
-        if (!S.user) { openAuth(); return; }
-        renderProfile();
-    }
-    closeSidebar();
-    window.scrollTo(0, 0);
-}
-
-function toggleSidebar() {
-    const sb = document.getElementById('sidebar');
-    const ov = document.getElementById('sideOverlay');
-    if (sb.classList.contains('open')) { closeSidebar(); }
-    else { sb.classList.add('open'); ov.style.display = 'block'; }
-}
-function closeSidebar() {
-    document.getElementById('sidebar').classList.remove('open');
-    document.getElementById('sideOverlay').style.display = 'none';
-}
-
-async function loadGenres() {
-    const { data } = await db.from('animes').select('genre').not('genre', 'is', null);
-    if (!data) return;
-    const genres = [...new Set(data.flatMap(a => (a.genre || '').split(',').map(g => g.trim()).filter(Boolean)))];
-    document.getElementById('genreGrid').innerHTML = genres.map(g =>
-        `<span class="genre-tag" onclick="filterByGenre('${esc(g)}')">${esc(g)}</span>`
-    ).join('');
-}
-function filterByGenre(genre) { S.catalogFilter = genre; goPage('catalog'); }
-
-async function loadHome() {
-    const { data: recent } = await db.from('animes').select('*').order('created_at', { ascending: false }).limit(8);
-    const { data: trending } = await db.from('animes').select('*').order('views', { ascending: false }).limit(8);
-    S.allAnimes = [...new Map([...(recent || []), ...(trending || [])].map(a => [a.id, a])).values()];
-    renderGrid('grid-recent', recent || []);
-    renderGrid('grid-trending', trending || []);
-    if (S.profile?.history?.length > 0) {
-        const { data: cont } = await db.from('animes').select('*').in('id', S.profile.history.slice(0, 8));
-        if (cont?.length > 0) {
-            renderGrid('grid-continue', cont);
-            document.getElementById('sec-continue').style.display = 'block';
-        }
+function updateHeader() {
+    const btnLogin = document.getElementById('btnLogin');
+    const userChip = document.getElementById('userChip');
+    const navProfile = document.getElementById('navProfile');
+    if (App.user && App.profile) {
+        btnLogin.style.display = 'none';
+        userChip.style.display = 'flex';
+        document.getElementById('userAvatar').textContent = (App.profile.username || 'U')[0].toUpperCase();
+        document.getElementById('userName').textContent = App.profile.username;
+        navProfile.style.display = 'flex';
+    } else {
+        btnLogin.style.display = 'block';
+        userChip.style.display = 'none';
+        navProfile.style.display = 'none';
     }
 }
-
-async function loadCatalog() {
-    document.getElementById('grid-catalog').innerHTML = '<div class="loading"><div class="spinner"></div> Chargement...</div>';
-    document.getElementById('empty-catalog').style.display = 'none';
-    let query = db.from('animes').select('*').order('created_at', { ascending: false });
-    if (S.catalogFilter === 'serie') query = query.eq('type', 'serie');
-    else if (S.catalogFilter === 'film') query = query.eq('type', 'film');
-    else if (S.catalogFilter !== 'all') query = query.ilike('genre', `%${S.catalogFilter}%`);
-    const search = document.getElementById('searchInput').value.trim();
-    if (search) query = query.ilike('title', `%${search}%`);
-    const { data } = await query;
-    renderGrid('grid-catalog', data || []);
-    document.getElementById('empty-catalog').style.display = (!data || data.length === 0) ? 'block' : 'none';
-}
-
-function setCatalogFilter(type, evt) {
-    S.catalogFilter = type;
-    document.querySelectorAll('.f-btn').forEach(b => b.classList.remove('active'));
-    if (evt?.target) evt.target.classList.add('active');
-    loadCatalog();
-}
-
-async function handleSearch(val) {
-    if (!val.trim()) {
-        if (document.getElementById('page-catalog').classList.contains('active')) loadCatalog();
-        return;
-    }
-    goPage('catalog');
-    const { data } = await db.from('animes').select('*').ilike('title', `%${val}%`).order('views', { ascending: false });
-    renderGrid('grid-catalog', data || []);
-    document.getElementById('empty-catalog').style.display = (!data || data.length === 0) ? 'block' : 'none';
-}
-
-function renderGrid(containerId, list) {
-    const el = document.getElementById(containerId);
-    if (!el) return;
-    if (!list.length) { el.innerHTML = ''; return; }
-    const isCatalog = el.classList.contains('anime-grid-catalog');
-    el.innerHTML = list.map(a => `
-        <div class="anime-card" onclick="openAnime('${a.id}')" ${isCatalog ? 'style="flex:none;width:auto;"' : ''}>
-            <div class="card-poster">
-                ${a.poster_url ? `<img src="${esc(a.poster_url)}" alt="${esc(a.title)}" loading="lazy" onerror="this.style.display='none'">` : ''}
-                <div class="card-overlay"><div class="card-play"><svg viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg></div></div>
-            </div>
-            <div class="card-info">
-                <div class="card-title">${esc(a.title)}</div>
-                <div class="card-genre">${esc(a.genre || 'Anime')}</div>
-            </div>
-        </div>
-    `).join('');
-}
-
-async function openAnime(id) {
-    if (!S.user) { openAuth(); return; }
-    document.getElementById('page-detail').classList.add('active');
-    document.querySelectorAll('.page').forEach(p => { if (p.id !== 'page-detail') p.classList.remove('active'); });
-    const { data: anime } = await db.from('animes').select('*').eq('id', id).single();
-    if (!anime) return;
-    S.selectedAnime = anime;
-    S.currentSi = null;
-    S.currentEi = null;
-    const { data: seasons } = await db.from('seasons').select('*').eq('anime_id', id).order('season_number');
-    S.seasons = seasons || [];
-    if (S.seasons.length > 0) {
-        const seasonIds = S.seasons.map(s => s.id);
-        const { data: episodes } = await db.from('episodes').select('*').in('season_id', seasonIds).order('episode_number');
-        S.episodes = episodes || [];
-    } else S.episodes = [];
-    const hasVostfr = anime.vostfr_stream || S.episodes.some(e => e.vostfr_stream);
-    S.selectedLang = hasVostfr ? 'vostfr' : 'vf';
-    await trackView(id);
-    renderDetail();
-    window.scrollTo(0, 0);
-}
-
-function renderDetail() {
-    const a = S.selectedAnime;
-    document.getElementById('bc-title').textContent = a.title;
-    document.getElementById('detailTitle').textContent = a.title;
-    document.getElementById('detailSynopsis').textContent = a.description || 'Aucune description disponible.';
-    document.getElementById('detailPoster').innerHTML = a.poster_url
-        ? `<img src="${esc(a.poster_url)}" alt="${esc(a.title)}" loading="lazy">`
-        : '<div style="width:100%;height:100%;background:linear-gradient(135deg,#5b21b6,#1e1e35);"></div>';
-    const hasVostfr = a.vostfr_stream || S.episodes.some(e => e.vostfr_stream);
-    const hasVf = a.vf_stream || S.episodes.some(e => e.vf_stream);
-    let badges = '';
-    if (a.genre) badges += `<span class="badge">${esc(a.genre)}</span>`;
-    if (a.rating) badges += `<span class="badge">⭐ ${a.rating}/10</span>`;
-    badges += `<span class="badge">${a.type === 'serie' ? 'SÉRIE' : 'FILM'}</span>`;
-    if (hasVostfr) badges += `<span class="badge">🇯🇵 VOSTFR</span>`;
-    if (hasVf) badges += `<span class="badge">🇫🇷 VF</span>`;
-    document.getElementById('detailBadges').innerHTML = badges;
-    const isFav = S.profile?.favorites?.includes(a.id);
-    const isWL = S.profile?.watchlist?.includes(a.id);
-    document.getElementById('detailActions').innerHTML = `
-        <button class="action-btn ${isFav ? 'active' : ''}" onclick="toggleFav('${a.id}')">
-            <svg viewBox="0 0 24 24" fill="${isFav ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-            ${isFav ? 'DANS LES FAVORIS' : 'AJOUTER AUX FAVORIS'}
-        </button>
-        <button class="action-btn ${isWL ? 'active' : ''}" onclick="toggleWatchlist('${a.id}')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            ${isWL ? 'DANS MA LISTE' : 'À REGARDER'}
-        </button>`;
-    let langHtml = '';
-    if (hasVostfr) langHtml += `<button class="lang-btn ${S.selectedLang === 'vostfr' ? 'active' : ''}" onclick="setLang('vostfr')">🇯🇵 VOSTFR</button>`;
-    if (hasVf) langHtml += `<button class="lang-btn ${S.selectedLang === 'vf' ? 'active' : ''}" onclick="setLang('vf')">🇫🇷 VF</button>`;
-    document.getElementById('langSelector').innerHTML = langHtml;
-    document.getElementById('videoWrap').innerHTML = `<div class="video-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,3 19,12 5,21 5,3"/></svg><p>Sélectionnez un épisode pour commencer</p></div>`;
-    document.getElementById('playerCtrls').innerHTML = '';
-    document.getElementById('epNav').style.display = 'none';
-    if (a.type === 'film') renderFilmPlayer();
-    else renderSeasonsBlock();
-}
-
-function setLang(lang) {
-    S.selectedLang = lang;
-    document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().includes(lang)));
-    document.querySelectorAll('.slang-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().includes(lang)));
-    if (S.selectedAnime.type === 'film') renderFilmPlayer();
-    else if (S.currentSi !== null && S.currentEi !== null) playEpisode(S.currentSi, S.currentEi);
-}
-
-function renderFilmPlayer() {
-    const a = S.selectedAnime;
-    const stream = S.selectedLang === 'vf' ? a.vf_stream : a.vostfr_stream;
-    const dl = S.selectedLang === 'vf' ? a.vf_download : a.vostfr_download;
-    document.getElementById('videoWrap').innerHTML = stream
-        ? `<iframe src="${esc(stream)}" allowfullscreen></iframe>`
-        : `<div class="video-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>Non disponible en ${S.selectedLang.toUpperCase()}</p></div>`;
-    let ctrls = '';
-    if (stream) ctrls += `<a href="${esc(stream)}" target="_blank" class="ctrl-btn ctrl-play"><svg viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>OUVRIR LE LECTEUR</a>`;
-    if (dl) ctrls += `<a href="${esc(dl)}" target="_blank" class="ctrl-btn ctrl-dl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>TÉLÉCHARGER</a>`;
-    document.getElementById('playerCtrls').innerHTML = ctrls;
-}
-
-function renderSeasonsBlock() {
-    if (!S.seasons.length) {
-        document.getElementById('seasonsBlock').innerHTML = '<p style="color:var(--text2);font-size:0.875rem;">Aucun épisode disponible.</p>';
-        return;
-    }
-    let html = '';
-    S.seasons.forEach((season, si) => {
-        const eps = S.episodes.filter(e => e.season_id === season.id);
-        const hasV = eps.some(e => e.vostfr_stream);
-        const hasF = eps.some(e => e.vf_stream);
-        html += `
-        <div class="season-box">
-            <div class="season-header">
-                <div>
-                    <div class="season-title">${esc(season.name)}</div>
-                    <div class="season-count">${eps.length} épisode(s)</div>
-                </div>
-                <div class="season-langs">
-                    ${hasV ? `<button class="slang-btn ${S.selectedLang==='vostfr'?'active':''}" onclick="setLang('vostfr')">🇯🇵 VOSTFR</button>` : ''}
-                    ${hasF ? `<button class="slang-btn ${S.selectedLang==='vf'?'active':''}" onclick="setLang('vf')">🇫🇷 VF</button>` : ''}
-                </div>
-            </div>
-            <div class="episodes-grid">
-                ${eps.map((ep, ei) => `
-                    <button class="ep-btn ${S.currentSi===si&&S.currentEi===ei?'active':''}" onclick="playEpisode(${si},${ei})">
-                        ÉP. ${ep.episode_number}
-                        ${ep.title ? `<small>${esc(ep.title)}</small>` : ''}
-                    </button>
-                `).join('')}
-            </div>
-        </div>`;
-    });
-    document.getElementById('seasonsBlock').innerHTML = html;
-}
-
-function playEpisode(si, ei) {
-    S.currentSi = si;
-    S.currentEi = ei;
-    const season = S.seasons[si];
-    const eps = S.episodes.filter(e => e.season_id === season.id);
-    const ep = eps[ei];
-    if (!ep) return;
-    const stream = S.selectedLang === 'vf' ? ep.vf_stream : ep.vostfr_stream;
-    const dl = S.selectedLang === 'vf' ? ep.vf_download : ep.vostfr_download;
-    document.getElementById('videoWrap').innerHTML = stream
-        ? `<iframe src="${esc(stream)}" allowfullscreen></iframe>`
-        : `<div class="video-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>Non disponible en ${S.selectedLang.toUpperCase()}</p></div>`;
-    let ctrls = '';
-    if (stream) ctrls += `<a href="${esc(stream)}" target="_blank" class="ctrl-btn ctrl-play"><svg viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>OUVRIR LE LECTEUR</a>`;
-    if (dl) ctrls += `<a href="${esc(dl)}" target="_blank" class="ctrl-btn ctrl-dl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>TÉLÉCHARGER</a>`;
-    document.getElementById('playerCtrls').innerHTML = ctrls;
-    const flatEps = S.seasons.flatMap((s, sIdx) => S.episodes.filter(e => e.season_id === s.id).map((ep, eIdx) => ({ si: sIdx, ei: eIdx })));
-    const curFlat = S.seasons.slice(0, si).reduce((acc, s) => acc + S.episodes.filter(e => e.season_id === s.id).length, 0) + ei;
-    document.getElementById('epNav').style.display = 'block';
-    document.getElementById('btnPrev').disabled = curFlat === 0;
-    document.getElementById('btnPrev').style.opacity = curFlat === 0 ? '0.4' : '1';
-    document.getElementById('btnNext').disabled = curFlat === flatEps.length - 1;
-    document.getElementById('btnNext').style.opacity = curFlat === flatEps.length - 1 ? '0.4' : '1';
-    document.querySelectorAll('.ep-btn').forEach(b => b.classList.remove('active'));
-    const allBtns = document.querySelectorAll('.ep-btn');
-    if (allBtns[curFlat]) allBtns[curFlat].classList.add('active');
-    window.scrollTo(0, 0);
-}
-
-function navigateEp(dir) {
-    if (S.currentSi === null) return;
-    const flatEps = S.seasons.flatMap((s, sIdx) => S.episodes.filter(e => e.season_id === s.id).map((ep, eIdx) => ({ si: sIdx, ei: eIdx })));
-    const curFlat = S.seasons.slice(0, S.currentSi).reduce((acc, s) => acc + S.episodes.filter(e => e.season_id === s.id).length, 0) + S.currentEi;
-    const next = curFlat + dir;
-    if (next < 0 || next >= flatEps.length) return;
-    playEpisode(flatEps[next].si, flatEps[next].ei);
-}
-
-async function trackView(animeId) {
-    if (!S.user) return;
-    await db.rpc('increment_anime_views', { anime_uuid: animeId });
-    await db.from('views').upsert({ user_id: S.user.id, anime_id: animeId }, { onConflict: 'user_id,anime_id' });
-    if (S.profile) {
-        const history = S.profile.history || [];
-        if (!history.includes(animeId)) {
-            history.unshift(animeId);
-            await db.from('profiles').update({ history: history.slice(0, 50) }).eq('id', S.user.id);
-            S.profile.history = history.slice(0, 50);
-        }
-    }
-}
-
-async function toggleFav(id) {
-    if (!S.profile) return;
-    const favs = S.profile.favorites || [];
-    const idx = favs.indexOf(id);
-    if (idx > -1) { favs.splice(idx, 1); toast('Retiré des favoris', 'ok'); }
-    else { favs.push(id); toast('Ajouté aux favoris ❤️', 'ok'); }
-    await db.from('profiles').update({ favorites: favs }).eq('id', S.user.id);
-    S.profile.favorites = favs;
-    renderDetail();
-}
-
-async function toggleWatchlist(id) {
-    if (!S.profile) return;
-    const wl = S.profile.watchlist || [];
-    const idx = wl.indexOf(id);
-    if (idx > -1) { wl.splice(idx, 1); toast('Retiré de la liste', 'ok'); }
-    else { wl.push(id); toast('Ajouté à la liste 📌', 'ok'); }
-    await db.from('profiles').update({ watchlist: wl }).eq('id', S.user.id);
-    S.profile.watchlist = wl;
-    renderDetail();
-}
-
-async function renderProfile() {
-    if (!S.user || !S.profile) return;
-    document.getElementById('profileAvatar').textContent = (S.profile.username || 'U')[0].toUpperCase();
-    document.getElementById('profileUsername').textContent = S.profile.username;
-    document.getElementById('profileEmail').textContent = S.profile.email;
-    document.getElementById('statVus').textContent = S.profile.history?.length || 0;
-    document.getElementById('statFav').textContent = S.profile.favorites?.length || 0;
-    document.getElementById('statListe').textContent = S.profile.watchlist?.length || 0;
-    const loadSection = async (ids, gridId, emptyId) => {
-        if (!ids?.length) {
-            document.getElementById(gridId).innerHTML = '';
-            document.getElementById(emptyId).style.display = 'block';
-            return;
-        }
-        const { data } = await db.from('animes').select('*').in('id', ids);
-        renderGrid(gridId, data || []);
-        document.getElementById(emptyId).style.display = (!data || !data.length) ? 'block' : 'none';
-    };
-    await loadSection(S.profile.favorites, 'grid-favorites', 'empty-favorites');
-    await loadSection(S.profile.watchlist, 'grid-watchlist', 'empty-watchlist');
-    await loadSection(S.profile.history, 'grid-history', 'empty-history');
-}
-
-function profileTab(tab, event) {
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('tab-' + tab).classList.add('active');
-    if (event?.target) event.target.classList.add('active');
-}
-
 function openAuth() {
-    S.authMode = 'login';
+    App.authMode = 'login';
     updateAuthForm();
     document.getElementById('authModal').classList.add('open');
 }
 function closeModal() { document.getElementById('authModal').classList.remove('open'); }
 function toggleAuthMode() {
-    S.authMode = S.authMode === 'login' ? 'register' : 'login';
+    App.authMode = App.authMode === 'login' ? 'register' : 'login';
     updateAuthForm();
 }
 function updateAuthForm() {
-    const isLogin = S.authMode === 'login';
+    const isLogin = App.authMode === 'login';
     document.getElementById('authTitle').textContent = isLogin ? 'SE CONNECTER' : "S'INSCRIRE";
     document.getElementById('authBtn').textContent = isLogin ? 'SE CONNECTER' : "S'INSCRIRE";
     document.getElementById('authToggleText').textContent = isLogin ? 'Pas de compte ?' : 'Déjà inscrit ?';
@@ -1545,9 +1403,8 @@ async function submitAuth(e) {
     const pwd = document.getElementById('authPassword').value;
     const uname = document.getElementById('authUsername').value.trim();
     const btn = document.getElementById('authBtn');
-    btn.disabled = true;
-    btn.textContent = 'Chargement...';
-    if (S.authMode === 'login') {
+    btn.disabled = true; btn.textContent = 'Chargement...';
+    if (App.authMode === 'login') {
         const { error } = await db.auth.signInWithPassword({ email, password: pwd });
         if (error) { toast(error.message === 'Invalid login credentials' ? 'Email ou mot de passe incorrect' : error.message, 'err'); }
         else { closeModal(); toast('Connexion réussie !', 'ok'); document.getElementById('authForm').reset(); }
@@ -1557,56 +1414,474 @@ async function submitAuth(e) {
         if (error) { toast(error.message, 'err'); }
         else { closeModal(); toast('Compte créé ! Bienvenue, ' + uname + ' !', 'ok'); document.getElementById('authForm').reset(); }
     }
-    btn.disabled = false;
-    updateAuthForm();
+    btn.disabled = false; updateAuthForm();
 }
 async function doLogout() {
     await db.auth.signOut();
     toast('Vous êtes déconnecté', 'ok');
     goPage('home');
 }
-function updateHeader() {
-    const btnLogin = document.getElementById('btnLogin');
-    const userChip = document.getElementById('userChip');
-    const navProfile = document.getElementById('navProfile');
-    if (S.user && S.profile) {
-        btnLogin.style.display = 'none';
-        userChip.style.display = 'flex';
-        document.getElementById('userAvatar').textContent = (S.profile.username || 'U')[0].toUpperCase();
-        document.getElementById('userName').textContent = S.profile.username;
-        navProfile.style.display = 'flex';
+
+// ======================= NAVIGATION =======================
+function goPage(page) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const el = document.getElementById('page-' + page);
+    if (!el) return;
+    el.classList.add('active');
+    const nav = document.querySelector(`[data-page="${page}"]`);
+    if (nav) nav.classList.add('active');
+    if (page === 'home') loadHome();
+    else if (page === 'catalog') loadCatalog(true);
+    else if (page === 'profile') {
+        if (!App.user) { openAuth(); return; }
+        renderProfile();
+    }
+    closeSidebar();
+    window.scrollTo(0, 0);
+}
+function toggleSidebar() {
+    const sb = document.getElementById('sidebar');
+    const ov = document.getElementById('sideOverlay');
+    if (sb.classList.contains('open')) { closeSidebar(); }
+    else { sb.classList.add('open'); ov.style.display = 'block'; }
+}
+function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sideOverlay').style.display = 'none';
+}
+
+// ======================= GENRES =======================
+async function loadGenres() {
+    const { data } = await db.from('animes').select('genre').not('genre', 'is', null);
+    if (!data) return;
+    const genres = [...new Set(data.flatMap(a => (a.genre || '').split(',').map(g => g.trim()).filter(Boolean)))];
+    document.getElementById('genreGrid').innerHTML = genres.map(g =>
+        `<span class="genre-tag" onclick="filterByGenre('${esc(g)}')">${esc(g)}</span>`
+    ).join('');
+}
+function filterByGenre(genre) { App.catalogFilter = genre; goPage('catalog'); }
+
+// ======================= HOME =======================
+async function loadHome() {
+    renderSkeletonGrid('grid-recent', 8);
+    renderSkeletonGrid('grid-trending', 8);
+    const cacheRecent = cacheGet('home_recent');
+    const cacheTrending = cacheGet('home_trending');
+    let recent = cacheRecent, trending = cacheTrending;
+    if (!recent || !trending) {
+        const [rRes, tRes] = await Promise.all([
+            safeDbCall(() => db.from('animes').select('*').order('created_at', { ascending: false }).limit(8)),
+            safeDbCall(() => db.from('animes').select('*').order('views', { ascending: false }).limit(8))
+        ]);
+        recent = rRes?.data || [];
+        trending = tRes?.data || [];
+        cacheSet('home_recent', recent);
+        cacheSet('home_trending', trending);
+    }
+    App.allAnimes = [...new Map([...recent, ...trending].map(a => [a.id, a])).values()];
+    renderGrid('grid-recent', recent);
+    renderGrid('grid-trending', trending);
+    if (App.profile?.history?.length > 0) {
+        const contIds = App.profile.history.slice(0, 8);
+        const { data: cont } = await safeDbCall(() => db.from('animes').select('*').in('id', contIds));
+        if (cont?.length) {
+            renderGrid('grid-continue', cont);
+            document.getElementById('sec-continue').style.display = 'block';
+        } else {
+            document.getElementById('sec-continue').style.display = 'none';
+        }
     } else {
-        btnLogin.style.display = 'block';
-        userChip.style.display = 'none';
-        navProfile.style.display = 'none';
+        document.getElementById('sec-continue').style.display = 'none';
+    }
+    setupCarousel('grid-recent');
+    setupCarousel('grid-trending');
+}
+function setupCarousel(gridId) {
+    const grid = document.getElementById(gridId);
+    if (!grid) return;
+    if (!grid.parentElement.classList.contains('carousel-container')) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'carousel-container';
+        grid.parentNode.insertBefore(wrapper, grid);
+        wrapper.appendChild(grid);
+        wrapper.insertAdjacentHTML('beforeend', `
+            <button class="carousel-btn left" onclick="this.parentElement.querySelector('.carousel-scroll').scrollBy(-200,0)">‹</button>
+            <button class="carousel-btn right" onclick="this.parentElement.querySelector('.carousel-scroll').scrollBy(200,0)">›</button>
+        `);
+        grid.classList.add('carousel-scroll');
     }
 }
+function renderGrid(containerId, list) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (!list.length) { el.innerHTML = ''; return; }
+    const isCatalog = el.classList.contains('anime-grid-catalog');
+    const now = new Date();
+    el.innerHTML = list.map(a => {
+        const isNew = a.created_at && (new Date(a.created_at) > new Date(now.getTime() - CONFIG.NEW_ANIME_DAYS*86400000));
+        return `
+        <div class="anime-card" onclick="openAnime('${a.id}')" style="${isCatalog ? 'flex:none;width:auto;' : ''}">
+            <div class="card-poster" style="position:relative;">
+                ${a.poster_url ? `<img src="${esc(a.poster_url)}" alt="${esc(a.title)}" loading="lazy" decoding="async" onerror="this.style.display='none'">` : ''}
+                ${isNew ? '<span class="badge-new">NOUVEAU</span>' : ''}
+                <div class="card-overlay"><div class="card-play"><svg viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg></div></div>
+            </div>
+            <div class="card-info">
+                <div class="card-title">${esc(a.title)}</div>
+                <div class="card-genre">${esc(a.genre || 'Anime')}</div>
+            </div>
+        </div>`;
+    }).join('');
+    if (el.id === 'grid-recent' || el.id === 'grid-trending' || el.id === 'grid-continue') {
+        setupCarousel(el.id);
+    }
+}
+
+// ======================= CATALOG =======================
+async function loadCatalog(reset = false) {
+    if (reset) {
+        App.catalogPage = 0;
+        App.catalogHasMore = true;
+        document.getElementById('grid-catalog').innerHTML = '';
+    }
+    renderSkeletonGrid('grid-catalog', CONFIG.PAGE_SIZE, true);
+    if (!fullCatalogCache) {
+        const { data: all } = await safeDbCall(() => db.from('animes').select('id,type,genre'));
+        if (all) fullCatalogCache = all;
+    }
+    updateFilterCounters();
+    const cacheKey = `catalog_${App.catalogFilter}_${App.lastSearch}_${App.catalogPage}`;
+    const cached = cacheGet(cacheKey);
+    let data;
+    if (cached) {
+        data = cached;
+    } else {
+        let query = db.from('animes').select('*').order('created_at', { ascending: false }).range(App.catalogPage * CONFIG.PAGE_SIZE, (App.catalogPage + 1) * CONFIG.PAGE_SIZE - 1);
+        if (App.catalogFilter === 'serie') query = query.eq('type', 'serie');
+        else if (App.catalogFilter === 'film') query = query.eq('type', 'film');
+        else if (App.catalogFilter !== 'all') query = query.ilike('genre', `%${App.catalogFilter}%`);
+        if (App.lastSearch) query = query.ilike('title', `%${App.lastSearch}%`);
+        const res = await safeDbCall(() => query);
+        data = res?.data || [];
+        cacheSet(cacheKey, data);
+    }
+    App.catalogHasMore = data.length === CONFIG.PAGE_SIZE;
+    if (App.catalogPage === 0) document.getElementById('grid-catalog').innerHTML = '';
+    renderGrid('grid-catalog', data);
+    document.getElementById('empty-catalog').style.display = (data.length === 0 && App.catalogPage === 0) ? 'block' : 'none';
+    let loadMoreBtn = document.getElementById('loadMoreBtn');
+    if (!loadMoreBtn) {
+        loadMoreBtn = document.createElement('button');
+        loadMoreBtn.id = 'loadMoreBtn';
+        loadMoreBtn.className = 'btn-submit';
+        loadMoreBtn.style.marginTop = '1.5rem';
+        loadMoreBtn.style.display = 'none';
+        loadMoreBtn.textContent = 'CHARGER PLUS';
+        loadMoreBtn.onclick = () => { App.catalogPage++; loadCatalog(false); };
+        document.getElementById('page-catalog').appendChild(loadMoreBtn);
+    }
+    loadMoreBtn.style.display = App.catalogHasMore ? 'block' : 'none';
+}
+function updateFilterCounters() {
+    if (!fullCatalogCache) return;
+    const all = fullCatalogCache.length;
+    const series = fullCatalogCache.filter(a => a.type === 'serie').length;
+    const films = fullCatalogCache.filter(a => a.type === 'film').length;
+    document.querySelectorAll('.f-btn').forEach(btn => {
+        const match = btn.getAttribute('onclick')?.match(/'([^']*)'/);
+        if (!match) return;
+        const type = match[1];
+        if (type === 'all') btn.innerHTML = `TOUS <span class="cnt">(${all})</span>`;
+        else if (type === 'serie') btn.innerHTML = `SÉRIES <span class="cnt">(${series})</span>`;
+        else if (type === 'film') btn.innerHTML = `FILMS <span class="cnt">(${films})</span>`;
+    });
+}
+function setCatalogFilter(type, evt) {
+    App.catalogFilter = type;
+    document.querySelectorAll('.f-btn').forEach(b => b.classList.remove('active'));
+    if (evt?.target) evt.target.classList.add('active');
+    loadCatalog(true);
+}
+const handleSearch = debounce(function(val) {
+    App.lastSearch = val.trim();
+    if (!App.lastSearch) {
+        if (document.getElementById('page-catalog').classList.contains('active')) loadCatalog(true);
+        return;
+    }
+    goPage('catalog');
+    loadCatalog(true);
+}, 300);
+
+// ======================= DÉTAIL ANIME =======================
+async function openAnime(id) {
+    if (!App.user) { openAuth(); return; }
+    document.getElementById('page-detail').classList.add('active');
+    document.querySelectorAll('.page').forEach(p => { if (p.id !== 'page-detail') p.classList.remove('active'); });
+    const { data: anime } = await safeDbCall(() => db.from('animes').select('*').eq('id', id).single());
+    if (!anime) return;
+    App.selectedAnime = anime;
+    App.currentSi = null; App.currentEi = null;
+    const { data: seasons } = await safeDbCall(() => db.from('seasons').select('*').eq('anime_id', id).order('season_number'));
+    App.seasons = seasons || [];
+    if (App.seasons.length) {
+        const ids = App.seasons.map(s => s.id);
+        const { data: episodes } = await safeDbCall(() => db.from('episodes').select('*').in('season_id', ids).order('episode_number'));
+        App.episodes = episodes || [];
+    } else App.episodes = [];
+    const hasVostfr = anime.vostfr_stream || App.episodes.some(e => e.vostfr_stream);
+    App.selectedLang = hasVostfr ? 'vostfr' : 'vf';
+    await trackView(id);
+    renderDetail();
+    document.title = `${anime.title} - G-WORLD`;
+    document.querySelector('meta[property="og:title"]')?.setAttribute('content', anime.title);
+    document.querySelector('meta[property="og:image"]')?.setAttribute('content', anime.poster_url || '');
+    window.scrollTo(0, 0);
+}
+
+function renderDetail() {
+    const a = App.selectedAnime;
+    document.getElementById('bc-title').textContent = a.title;
+    document.getElementById('detailTitle').textContent = a.title;
+    document.getElementById('detailSynopsis').textContent = a.description || 'Aucune description disponible.';
+    document.getElementById('detailPoster').innerHTML = a.poster_url
+        ? `<img src="${esc(a.poster_url)}" alt="${esc(a.title)}" loading="lazy">`
+        : '<div style="width:100%;height:100%;background:linear-gradient(135deg,#5b21b6,#1e1e35);"></div>';
+    const hasVostfr = a.vostfr_stream || App.episodes.some(e => e.vostfr_stream);
+    const hasVf = a.vf_stream || App.episodes.some(e => e.vf_stream);
+    let badges = '';
+    if (a.genre) badges += `<span class="badge">${esc(a.genre)}</span>`;
+    if (a.rating) badges += `<span class="badge">⭐ ${a.rating}/10</span>`;
+    badges += `<span class="badge">${a.type === 'serie' ? 'SÉRIE' : 'FILM'}</span>`;
+    if (hasVostfr) badges += `<span class="badge">🇯🇵 VOSTFR</span>`;
+    if (hasVf) badges += `<span class="badge">🇫🇷 VF</span>`;
+    document.getElementById('detailBadges').innerHTML = badges;
+
+    const isFav = App.profile?.favorites?.includes(a.id);
+    const isWL = App.profile?.watchlist?.includes(a.id);
+    document.getElementById('detailActions').innerHTML = `
+        <button class="action-btn ${isFav ? 'active' : ''}" onclick="toggleFav('${a.id}')">
+            <svg viewBox="0 0 24 24" fill="${isFav ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            ${isFav ? 'DANS LES FAVORIS' : 'AJOUTER AUX FAVORIS'}
+        </button>
+        <button class="action-btn ${isWL ? 'active' : ''}" onclick="toggleWatchlist('${a.id}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            ${isWL ? 'DANS MA LISTE' : 'À REGARDER'}
+        </button>`;
+    let langHtml = '';
+    if (hasVostfr) langHtml += `<button class="lang-btn ${App.selectedLang === 'vostfr' ? 'active' : ''}" onclick="setLang('vostfr')">🇯🇵 VOSTFR</button>`;
+    if (hasVf) langHtml += `<button class="lang-btn ${App.selectedLang === 'vf' ? 'active' : ''}" onclick="setLang('vf')">🇫🇷 VF</button>`;
+    document.getElementById('langSelector').innerHTML = langHtml;
+    document.getElementById('videoWrap').innerHTML = `<div class="video-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,3 19,12 5,21 5,3"/></svg><p>Sélectionnez un épisode pour commencer</p></div>`;
+    document.getElementById('playerCtrls').innerHTML = '';
+    document.getElementById('epNav').style.display = 'none';
+    if (a.type === 'film') renderFilmPlayer();
+    else renderSeasonsBlock();
+    // Restaurer dernier épisode regardé
+    if (App.profile?.last_watched?.anime_id === a.id && a.type === 'serie') {
+        const lw = App.profile.last_watched;
+        const si = App.seasons.findIndex(s => s.id === lw.season_id);
+        const ei = App.episodes.filter(e => e.season_id === lw.season_id).findIndex(e => e.id === lw.episode_id);
+        if (si > -1 && ei > -1) playEpisode(si, ei);
+    }
+}
+
+function setLang(lang) {
+    App.selectedLang = lang;
+    document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().includes(lang)));
+    document.querySelectorAll('.slang-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().includes(lang)));
+    if (App.selectedAnime.type === 'film') renderFilmPlayer();
+    else if (App.currentSi !== null && App.currentEi !== null) playEpisode(App.currentSi, App.currentEi);
+}
+
+function renderFilmPlayer() {
+    const a = App.selectedAnime;
+    const stream = App.selectedLang === 'vf' ? a.vf_stream : a.vostfr_stream;
+    const dl = App.selectedLang === 'vf' ? a.vf_download : a.vostfr_download;
+    document.getElementById('videoWrap').innerHTML = stream
+        ? `<iframe src="${esc(stream)}" allowfullscreen></iframe>`
+        : `<div class="video-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>Non disponible en ${App.selectedLang.toUpperCase()}</p></div>`;
+    let ctrls = '';
+    if (stream) ctrls += `<a href="${esc(stream)}" target="_blank" class="ctrl-btn ctrl-play"><svg viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>OUVRIR LE LECTEUR</a>`;
+    if (dl) ctrls += `<a href="${esc(dl)}" target="_blank" class="ctrl-btn ctrl-dl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>TÉLÉCHARGER</a>`;
+    document.getElementById('playerCtrls').innerHTML = ctrls;
+}
+
+function renderSeasonsBlock() {
+    if (!App.seasons.length) {
+        document.getElementById('seasonsBlock').innerHTML = '<p style="color:var(--text2);font-size:0.875rem;">Aucun épisode disponible.</p>';
+        return;
+    }
+    let html = '';
+    App.seasons.forEach((season, si) => {
+        const eps = App.episodes.filter(e => e.season_id === season.id);
+        const hasV = eps.some(e => e.vostfr_stream);
+        const hasF = eps.some(e => e.vf_stream);
+        html += `
+        <div class="season-box">
+            <div class="season-header">
+                <div>
+                    <div class="season-title">${esc(season.name)}</div>
+                    <div class="season-count">${eps.length} épisode(s)</div>
+                </div>
+                <div class="season-langs">
+                    ${hasV ? `<button class="slang-btn ${App.selectedLang==='vostfr'?'active':''}" onclick="setLang('vostfr')">🇯🇵 VOSTFR</button>` : ''}
+                    ${hasF ? `<button class="slang-btn ${App.selectedLang==='vf'?'active':''}" onclick="setLang('vf')">🇫🇷 VF</button>` : ''}
+                </div>
+            </div>
+            <div class="episodes-grid">
+                ${eps.map((ep, ei) => `
+                    <button class="ep-btn ${App.currentSi===si&&App.currentEi===ei?'active':''}" onclick="playEpisode(${si},${ei})">
+                        ÉP. ${ep.episode_number}
+                        ${ep.title ? `<small>${esc(ep.title)}</small>` : ''}
+                    </button>
+                `).join('')}
+            </div>
+        </div>`;
+    });
+    document.getElementById('seasonsBlock').innerHTML = html;
+}
+
+function playEpisode(si, ei) {
+    App.currentSi = si;
+    App.currentEi = ei;
+    const season = App.seasons[si];
+    const eps = App.episodes.filter(e => e.season_id === season.id);
+    const ep = eps[ei];
+    if (!ep) return;
+    const stream = App.selectedLang === 'vf' ? ep.vf_stream : ep.vostfr_stream;
+    const dl = App.selectedLang === 'vf' ? ep.vf_download : ep.vostfr_download;
+    document.getElementById('videoWrap').innerHTML = stream
+        ? `<iframe src="${esc(stream)}" allowfullscreen></iframe>`
+        : `<div class="video-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>Non disponible en ${App.selectedLang.toUpperCase()}</p></div>`;
+    let ctrls = '';
+    if (stream) ctrls += `<a href="${esc(stream)}" target="_blank" class="ctrl-btn ctrl-play"><svg viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>OUVRIR LE LECTEUR</a>`;
+    if (dl) ctrls += `<a href="${esc(dl)}" target="_blank" class="ctrl-btn ctrl-dl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>TÉLÉCHARGER</a>`;
+    document.getElementById('playerCtrls').innerHTML = ctrls;
+    const flatEps = App.seasons.flatMap((s, sIdx) => App.episodes.filter(e => e.season_id === s.id).map((ep, eIdx) => ({ si: sIdx, ei: eIdx })));
+    const curFlat = App.seasons.slice(0, si).reduce((acc, s) => acc + App.episodes.filter(e => e.season_id === s.id).length, 0) + ei;
+    document.getElementById('epNav').style.display = 'block';
+    document.getElementById('btnPrev').disabled = curFlat === 0;
+    document.getElementById('btnPrev').style.opacity = curFlat === 0 ? '0.4' : '1';
+    document.getElementById('btnNext').disabled = curFlat === flatEps.length - 1;
+    document.getElementById('btnNext').style.opacity = curFlat === flatEps.length - 1 ? '0.4' : '1';
+    document.querySelectorAll('.ep-btn').forEach(b => b.classList.remove('active'));
+    const allBtns = document.querySelectorAll('.ep-btn');
+    if (allBtns[curFlat]) allBtns[curFlat].classList.add('active');
+    // Sauvegarder dernier épisode regardé
+    if (App.profile) {
+        const lastWatched = { anime_id: App.selectedAnime.id, season_id: season.id, episode_id: ep.id, season_idx: si, episode_idx: ei };
+        safeDbCall(() => db.from('profiles').update({ last_watched: lastWatched }).eq('id', App.user.id));
+        App.profile.last_watched = lastWatched;
+    }
+}
+
+function navigateEp(dir) {
+    if (App.currentSi === null) return;
+    const flatEps = App.seasons.flatMap((s, sIdx) => App.episodes.filter(e => e.season_id === s.id).map((ep, eIdx) => ({ si: sIdx, ei: eIdx })));
+    const curFlat = App.seasons.slice(0, App.currentSi).reduce((acc, s) => acc + App.episodes.filter(e => e.season_id === s.id).length, 0) + App.currentEi;
+    const next = curFlat + dir;
+    if (next < 0 || next >= flatEps.length) return;
+    playEpisode(flatEps[next].si, flatEps[next].ei);
+}
+
+async function trackView(animeId) {
+    if (!App.user) return;
+    const { data: lastView } = await safeDbCall(() => db.from('views').select('created_at').eq('user_id', App.user.id).eq('anime_id', animeId).order('created_at', { ascending: false }).limit(1));
+    if (lastView?.length) {
+        const diff = Date.now() - new Date(lastView[0].created_at).getTime();
+        if (diff < CONFIG.VIEW_COOLDOWN_MS) return;
+    }
+    await safeDbCall(() => db.rpc('increment_anime_views', { anime_uuid: animeId }));
+    await safeDbCall(() => db.from('views').upsert({ user_id: App.user.id, anime_id: animeId }, { onConflict: 'user_id,anime_id' }));
+    if (App.profile) {
+        const history = App.profile.history || [];
+        if (!history.includes(animeId)) {
+            history.unshift(animeId);
+            await safeDbCall(() => db.from('profiles').update({ history: history.slice(0, 50) }).eq('id', App.user.id));
+            App.profile.history = history.slice(0, 50);
+        }
+    }
+}
+
+async function toggleFav(id) {
+    if (!App.profile) return;
+    const favs = App.profile.favorites || [];
+    const idx = favs.indexOf(id);
+    if (idx > -1) { favs.splice(idx, 1); toast('Retiré des favoris', 'ok'); }
+    else { favs.push(id); toast('Ajouté aux favoris ❤️', 'ok'); }
+    await safeDbCall(() => db.from('profiles').update({ favorites: favs }).eq('id', App.user.id));
+    App.profile.favorites = favs;
+    renderDetail();
+}
+
+async function toggleWatchlist(id) {
+    if (!App.profile) return;
+    const wl = App.profile.watchlist || [];
+    const idx = wl.indexOf(id);
+    if (idx > -1) { wl.splice(idx, 1); toast('Retiré de la liste', 'ok'); }
+    else { wl.push(id); toast('Ajouté à la liste 📌', 'ok'); }
+    await safeDbCall(() => db.from('profiles').update({ watchlist: wl }).eq('id', App.user.id));
+    App.profile.watchlist = wl;
+    renderDetail();
+}
+
+// ======================= PROFIL =======================
+async function renderProfile() {
+    if (!App.user || !App.profile) return;
+    document.getElementById('profileAvatar').textContent = (App.profile.username || 'U')[0].toUpperCase();
+    document.getElementById('profileUsername').textContent = App.profile.username;
+    document.getElementById('profileEmail').textContent = App.profile.email;
+    document.getElementById('statVus').textContent = App.profile.history?.length || 0;
+    document.getElementById('statFav').textContent = App.profile.favorites?.length || 0;
+    document.getElementById('statListe').textContent = App.profile.watchlist?.length || 0;
+    const loadSection = async (ids, gridId, emptyId) => {
+        if (!ids?.length) {
+            document.getElementById(gridId).innerHTML = '';
+            document.getElementById(emptyId).style.display = 'block';
+            return;
+        }
+        const { data } = await safeDbCall(() => db.from('animes').select('*').in('id', ids));
+        renderGrid(gridId, data || []);
+        document.getElementById(emptyId).style.display = (!data || data.length === 0) ? 'block' : 'none';
+    };
+    await loadSection(App.profile.favorites, 'grid-favorites', 'empty-favorites');
+    await loadSection(App.profile.watchlist, 'grid-watchlist', 'empty-watchlist');
+    await loadSection(App.profile.history, 'grid-history', 'empty-history');
+}
+
+function profileTab(tab, event) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    const tabEl = document.getElementById('tab-' + tab);
+    if (tabEl) tabEl.classList.add('active');
+    if (event?.target) event.target.classList.add('active');
+}
+
+// ======================= CONTACT =======================
 async function submitContact(e) {
     e.preventDefault();
     const btn = document.getElementById('cBtn');
     btn.disabled = true;
     btn.textContent = 'Envoi...';
-    const { error } = await db.from('contacts').insert({
+    const { error } = await safeDbCall(() => db.from('contacts').insert({
         name: document.getElementById('cName').value.trim(),
         email: document.getElementById('cEmail').value.trim(),
         subject: document.getElementById('cSubject').value,
         message: document.getElementById('cMessage').value.trim(),
-    });
+    }));
     if (error) { toast('Erreur lors de l\'envoi. Réessayez.', 'err'); }
     else { toast('Message envoyé ! Nous vous répondrons rapidement.', 'ok'); e.target.reset(); }
     btn.disabled = false;
     btn.textContent = 'ENVOYER LE MESSAGE';
 }
-function toast(msg, type = '') {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = `toast ${type}`;
-    setTimeout(() => t.classList.add('show'), 10);
-    setTimeout(() => t.classList.remove('show'), 3200);
-}
-function esc(str) {
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+
+// ======================= INITIALISATION =======================
+document.addEventListener('DOMContentLoaded', async () => {
+    await initAuth();
+    await loadHome();
+    loadGenres();
+});
 </script>
 </body>
 </html>
