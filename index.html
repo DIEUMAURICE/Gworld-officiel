@@ -2738,6 +2738,42 @@ const metaCache = document.createElement('meta');
 metaCache.httpEquiv = 'Cache-Control';
 metaCache.content = 'no-cache, no-store, must-revalidate';
 document.head.appendChild(metaCache);
+// Détecter quand la page a été "gelée" puis réveillée
+let lastActiveTime = Date.now();
+
+function reloadIfStale() {
+  const now = Date.now();
+  // Si plus de 5 secondes se sont écoulées depuis la dernière activité connue
+  if (now - lastActiveTime > 5000) {
+    console.log('Rechargement forcé après inactivité');
+    window.location.reload();
+  }
+  lastActiveTime = now;
+}
+
+// Met à jour le timestamp à chaque interaction utilisateur
+window.addEventListener('click', () => { lastActiveTime = Date.now(); });
+window.addEventListener('keydown', () => { lastActiveTime = Date.now(); });
+window.addEventListener('scroll', () => { lastActiveTime = Date.now(); });
+
+// Quand l'onglet redevient visible
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    reloadIfStale();
+  }
+});
+
+// Quand la page est restaurée depuis le cache arrière
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) {
+    reloadIfStale();
+  }
+});
+
+// Quand la fenêtre reçoit le focus
+window.addEventListener('focus', () => {
+  reloadIfStale();
+});
 </script>
 </body>
 </html>
