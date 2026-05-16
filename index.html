@@ -2675,105 +2675,120 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadHome();
     loadGenres();
 });
-// ========== CORRECTION DÉFINITIVE : FORCER LE RÉVEIL DU SITE ==========
 
-// 1. Supprimer tous les service workers existants (cause probable)
+// ======================= CORRECTION UNIQUE : RÉVEIL SANS PERTE =======================
+
+// Supprimer tous les service workers existants (une seule fois)
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(function(registrations) {
-    for (let registration of registrations) {
-      registration.unregister();
-      console.log('Service Worker supprimé');
-    }
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    registrations.forEach(r => r.unregister());
   });
 }
 
-// 2. Fonction qui force le rafraîchissement des données sans recharger la page
-async function refreshSiteData() {
-  console.log('Réveil du site – rechargement des données...');
-  // Vider les caches mémoire locaux
+// Variables pour sauvegarder l'état
+let savedPageId = null;
+let savedAnimeId = null;
+let savedSeasonIdx = null;
+let savedEpisodeIdx = null;
+
+function saveCurrentState() {
+  const activePage = document.querySelector('.page.active');
+  if (activePage) {
+    savedPageId = activePage.id;
+    if (savedPageId === 'page-detail' && App.selectedAnime) {
+      savedAnimeId = App.selectedAnime.id;
+      savedSeasonIdx = App.currentSi;
+      savedEpisodeIdx = App.currentEi;
+    } else {
+      savedAnimeId = null;
+    }
+  }
+}
+
+function restoreCurrentState() {
+  if (savedPageId === 'page-home') {
+    goPage('home');
+  } else if (savedPageId === 'page-catalog') {
+    goPage('catalog');
+  } else if (savedPageId === 'page-detail' && savedAnimeId) {
+    openAnime(savedAnimeId).then(() => {
+      if (savedSeasonIdx !== null && savedEpisodeIdx !== null) {
+        playEpisode(savedSeasonIdx, savedEpisodeIdx);
+      }
+    });
+  } else if (savedPageId === 'page-profile') {
+    goPage('profile');
+  }
+}
+
+async function wakeUpSite() {
+  console.log('Réveil du site – restauration sans rechargement');
+  
+  // Sauvegarde de l'état actuel
+  saveCurrentState();
+  
+  // Vider les caches mémoire
   localCache.clear();
   fullCatalogCache = null;
   
-  // Recharger la page active comme si on venait d'arriver
-  const activePage = document.querySelector('.page.active');
-  if (!activePage) return;
+  // Réinitialisation partielle de l'état global (conserve l'utilisateur)
+  App.selectedAnime = null;
+  App.currentSi = null;
+  App.currentEi = null;
+  App.seasons = [];
+  App.episodes = [];
+  App.catalogPage = 0;
+  App.catalogHasMore = true;
+  App.catalogLoading = false;
   
-  if (activePage.id === 'page-home') {
-    await loadHome();
-  } else if (activePage.id === 'page-catalog') {
-    await loadCatalog(true);
-  } else if (activePage.id === 'page-detail' && App.selectedAnime) {
-    await openAnime(App.selectedAnime.id);
-  } else if (activePage.id === 'page-profile' && App.user) {
+  // Rafraîchir la session Supabase si expirée
+  try {
+    const { data: { session } } = await db.auth.getSession();
+    if (session && session.expires_at < Date.now() / 1000) {
+      await db.auth.refreshSession();
+      console.log('Session Supabase rafraîchie');
+    }
+  } catch(e) { console.warn('Erreur rafraîchissement session', e); }
+  
+  // Recharger le profil utilisateur
+  if (App.user) {
     await loadProfile();
-    await renderProfile();
   }
   
-  // Mettre à jour l'interface utilisateur (connexion)
+  // Restaurer l'interface exactement où l'utilisateur était
+  await restoreCurrentState();
+  
+  // Mettre à jour l'en-tête (bouton connexion / avatar)
   updateHeader();
 }
 
-// 3. Écouter tous les événements de retour sur la page
-window.addEventListener('pageshow', function(event) {
-  if (event.persisted) {
-    // La page vient du cache navigateur (ex: retour arrière)
-    refreshSiteData();
-  }
-});
-
-document.addEventListener('visibilitychange', function() {
-  if (!document.hidden) {
-    // L'onglet redevient visible après avoir été caché
-    refreshSiteData();
-  }
-});
-
-window.addEventListener('focus', function() {
-  // La fenêtre a reçu le focus (clic sur l'onglet)
-  refreshSiteData();
-});
-
-// 4. Désactiver le cache HTTP via les meta tags (renforce)
-const metaCache = document.createElement('meta');
-metaCache.httpEquiv = 'Cache-Control';
-metaCache.content = 'no-cache, no-store, must-revalidate';
-document.head.appendChild(metaCache);
-// Détecter quand la page a été "gelée" puis réveillée
-let lastActiveTime = Date.now();
-
-function reloadIfStale() {
-  const now = Date.now();
-  // Si plus de 5 secondes se sont écoulées depuis la dernière activité connue
-  if (now - lastActiveTime > 5000) {
-    console.log('Rechargement forcé après inactivité');
-    window.location.reload();
-  }
-  lastActiveTime = now;
-}
-
-// Met à jour le timestamp à chaque interaction utilisateur
-window.addEventListener('click', () => { lastActiveTime = Date.now(); });
-window.addEventListener('keydown', () => { lastActiveTime = Date.now(); });
-window.addEventListener('scroll', () => { lastActiveTime = Date.now(); });
-
-// Quand l'onglet redevient visible
-document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) {
-    reloadIfStale();
-  }
-});
-
-// Quand la page est restaurée depuis le cache arrière
+// Événements qui déclenchent le réveil
 window.addEventListener('pageshow', (event) => {
-  if (event.persisted) {
-    reloadIfStale();
-  }
+  if (event.persisted) wakeUpSite();
 });
 
-// Quand la fenêtre reçoit le focus
-window.addEventListener('focus', () => {
-  reloadIfStale();
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) wakeUpSite();
 });
+
+window.addEventListener('focus', () => {
+  wakeUpSite();
+});
+
+// Heartbeat optionnel : vérifier périodiquement si le site répond
+let lastHeartbeat = Date.now();
+setInterval(() => {
+  if (!document.hidden && (Date.now() - lastHeartbeat > 5000)) {
+    // Si l'onglet est visible mais aucune interaction depuis 5s, on réveille
+    wakeUpSite();
+    lastHeartbeat = Date.now();
+  }
+  lastHeartbeat = Date.now();
+}, 6000);
+
+window.addEventListener('click', () => { lastHeartbeat = Date.now(); });
+window.addEventListener('keydown', () => { lastHeartbeat = Date.now(); });
+window.addEventListener('scroll', () => { lastHeartbeat = Date.now(); });
 </script>
 </body>
 </html>
