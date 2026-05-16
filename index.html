@@ -1931,10 +1931,22 @@ document.addEventListener('keydown', e => {
 // ======================= AUTH =======================
 async function initAuth() {
     const { data: { session } } = await db.auth.getSession();
-    if (session?.user) { App.user = session.user; await loadProfile(); updateHeader(); }
-    db.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN' && session) { App.user = session.user; await loadProfile(); updateHeader(); }
-        else if (event === 'SIGNED_OUT') { App.user = null; App.profile = null; updateHeader(); }
+    if (session?.user) {
+        App.user = session.user;
+        await loadProfile();
+        updateHeader();
+    }
+    // CORRECTION : callback NON asynchrone
+    db.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+            App.user = session.user;
+            // On évite le await direct, on utilise .then()
+            loadProfile().then(() => updateHeader()).catch(console.error);
+        } else if (event === 'SIGNED_OUT') {
+            App.user = null;
+            App.profile = null;
+            updateHeader();
+        }
     });
 }
 
@@ -2724,14 +2736,10 @@ function restoreCurrentState() {
 async function wakeUpSite() {
   console.log('Réveil du site – restauration sans rechargement');
   
-  // Sauvegarde de l'état actuel
   saveCurrentState();
-  
-  // Vider les caches mémoire
   localCache.clear();
   fullCatalogCache = null;
   
-  // Réinitialisation partielle de l'état global (conserve l'utilisateur)
   App.selectedAnime = null;
   App.currentSi = null;
   App.currentEi = null;
@@ -2741,54 +2749,23 @@ async function wakeUpSite() {
   App.catalogHasMore = true;
   App.catalogLoading = false;
   
-  // Rafraîchir la session Supabase si expirée
+  // === NOUVEAU BLOC (celui que tu as écrit) ===
   try {
-    const { data: { session } } = await db.auth.getSession();
-    if (session && session.expires_at < Date.now() / 1000) {
+    const { data: { session }, error } = await db.auth.getSession();
+    if (error || (session && session.expires_at < Date.now() / 1000)) {
       await db.auth.refreshSession();
       console.log('Session Supabase rafraîchie');
     }
   } catch(e) { console.warn('Erreur rafraîchissement session', e); }
+  // ==========================================
   
-  // Recharger le profil utilisateur
   if (App.user) {
     await loadProfile();
   }
   
-  // Restaurer l'interface exactement où l'utilisateur était
   await restoreCurrentState();
-  
-  // Mettre à jour l'en-tête (bouton connexion / avatar)
   updateHeader();
 }
-
-// Événements qui déclenchent le réveil
-window.addEventListener('pageshow', (event) => {
-  if (event.persisted) wakeUpSite();
-});
-
-document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) wakeUpSite();
-});
-
-window.addEventListener('focus', () => {
-  wakeUpSite();
-});
-
-// Heartbeat optionnel : vérifier périodiquement si le site répond
-let lastHeartbeat = Date.now();
-setInterval(() => {
-  if (!document.hidden && (Date.now() - lastHeartbeat > 5000)) {
-    // Si l'onglet est visible mais aucune interaction depuis 5s, on réveille
-    wakeUpSite();
-    lastHeartbeat = Date.now();
-  }
-  lastHeartbeat = Date.now();
-}, 6000);
-
-window.addEventListener('click', () => { lastHeartbeat = Date.now(); });
-window.addEventListener('keydown', () => { lastHeartbeat = Date.now(); });
-window.addEventListener('scroll', () => { lastHeartbeat = Date.now(); });
 </script>
 </body>
 </html>
