@@ -1,0 +1,35 @@
+{
+  "name": "G-WORLD Anime Streaming",
+  "short_name": "G-WORLD",
+  "description": "Streaming d'animes VOSTFR et VF - G-WORLD",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a0a14",
+  "theme_color": "#6d28d9",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "https://i.postimg.cc/bJd0LGMW/Video-Capture-20250809-145140.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://i.postimg.cc/bJd0LGMW/Video-Capture-20250809-145140.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["entertainment", "video"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Catalogue",
+      "short_name": "Catalogue",
+      "description": "Parcourir tous les animes",
+      "url": "/?page=catalog"
+    }
+  ]
+}
