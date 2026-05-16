@@ -2672,6 +2672,51 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadHome();
     loadGenres();
 });
+// CORRECTION : recharge l'état quand on revient sur l'onglet/la page sans actualiser
+
+window.addEventListener('pageshow', function(event) {
+  // Si la page a été restaurée depuis le cache (ex: retour arrière ou onglet réactivé)
+  if (event.persisted) {
+    console.log('Page restaurée, rechargement de l’état...');
+    // Réinitialise l'authentification si besoin
+    if (typeof initAuth === 'function') initAuth();
+    // Recharge la page active sans perte de contenu
+    const activePage = document.querySelector('.page.active');
+    if (activePage) {
+      if (activePage.id === 'page-home') {
+        if (typeof loadHome === 'function') loadHome();
+      } else if (activePage.id === 'page-catalog') {
+        if (typeof loadCatalog === 'function') loadCatalog(true);
+      } else if (activePage.id === 'page-detail' && window.App && window.App.selectedAnime) {
+        if (typeof openAnime === 'function') openAnime(window.App.selectedAnime.id);
+      } else if (activePage.id === 'page-profile' && window.App && window.App.user) {
+        if (typeof renderProfile === 'function') renderProfile();
+      }
+    }
+    // Force la mise à jour de l'affichage utilisateur
+    if (typeof updateHeader === 'function') updateHeader();
+  }
+});
+
+// Détecte le retour de l'onglet en arrière-plan vers le premier plan
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden) {
+    // La page redevient visible
+    console.log('Onglet réactivé, vérification de l’état...');
+    if (window.App && window.App.user && !window.App.profile) {
+      if (typeof loadProfile === 'function') loadProfile();
+    }
+    if (typeof updateHeader === 'function') updateHeader();
+  }
+});
+
+// Optionnel : quand la fenêtre reçoit le focus (clic sur l'onglet)
+window.addEventListener('focus', function() {
+  if (window.App && window.App.user && !window.App.profile) {
+    if (typeof loadProfile === 'function') loadProfile();
+    if (typeof updateHeader === 'function') updateHeader();
+  }
+});
 </script>
 </body>
 </html>
