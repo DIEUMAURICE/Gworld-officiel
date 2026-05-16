@@ -1079,10 +1079,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await db.auth.getSession();
     if (session?.user) await checkAdminAccess(session.user);
 
-    db.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN' && session) await checkAdminAccess(session.user);
-        else if (event === 'SIGNED_OUT') showLogin();
-    });
+  db.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+        // Appel sans await, on gère avec .then()
+        checkAdminAccess(session.user).catch(console.error);
+    } else if (event === 'SIGNED_OUT') {
+        showLogin();
+    }
+});
 
     // Keyboard shortcuts
     document.addEventListener('keydown', e => {
@@ -2383,6 +2387,86 @@ async function refreshUnreadBadge() {
 async function logAction(action, targetType, targetId, details={}) {
     await db.from('admin_logs').insert({ admin_id:adminUser?.id, admin_email:adminUser?.email, action, target_type:targetType, target_id:String(targetId), details }).catch(()=>{});
 }
+// ======================= RÉVEIL AUTOMATIQUE =======================
+
+// Supprimer tout service worker existant
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(registrations => {
+        registrations.forEach(r => r.unregister());
+    });
+}
+
+// Variables pour sauvegarder la section active (optionnel, mais utile)
+let lastSection = null;
+
+function saveCurrentAdminState() {
+    const activePage = document.querySelector('.admin-page.active');
+    if (activePage && activePage.id) {
+        lastSection = activePage.id.replace('sec-', '');
+    }
+}
+
+function restoreAdminState() {
+    if (lastSection && lastSection !== currentSection) {
+        goSection(lastSection);
+    } else {
+        // Rafraîchir simplement la section courante
+        refreshCurrentSection();
+    }
+}
+
+async function wakeUpAdmin() {
+    console.log('Réveil du panneau admin – restauration');
+    saveCurrentAdminState();
+
+    // Vider les caches mémoire locaux (optionnel)
+    // Aucun cache global ici, mais on peut rafraîchir les données
+
+    // Rafraîchir la session Supabase silencieusement
+    try {
+        const { data: { session }, error } = await db.auth.getSession();
+        if (error || (session && session.expires_at < Date.now() / 1000)) {
+            await db.auth.refreshSession();
+            console.log('Session Supabase admin rafraîchie');
+        }
+    } catch(e) { console.warn('Erreur rafraîchissement session admin', e); }
+
+    // Recharger le profil admin (si toujours connecté)
+    if (adminUser && adminProfile) {
+        const { data: profile } = await db.from('profiles').select('*').eq('id', adminUser.id).single();
+        if (profile) adminProfile = profile;
+    }
+
+    // Restaurer la section
+    restoreAdminState();
+}
+
+// Écouter les événements de retour sur l'onglet / fenêtre
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) wakeUpAdmin();
+});
+
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) wakeUpAdmin();
+});
+
+window.addEventListener('focus', () => {
+    wakeUpAdmin();
+});
+
+// Petit heartbeat pour détecter un gel (optionnel)
+let lastActivity = Date.now();
+setInterval(() => {
+    if (!document.hidden && (Date.now() - lastActivity > 5000)) {
+        wakeUpAdmin();
+        lastActivity = Date.now();
+    }
+    lastActivity = Date.now();
+}, 8000);
+
+window.addEventListener('click', () => { lastActivity = Date.now(); });
+window.addEventListener('keydown', () => { lastActivity = Date.now(); });
+window.addEventListener('scroll', () => { lastActivity = Date.now(); });
 </script>
 </body>
 </html>
