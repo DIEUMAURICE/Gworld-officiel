@@ -29,6 +29,6 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          MAX_ANIMES: '120'
-          MAX_EPISODES_PER_ANIME: '4'
+          MAX_ANIMES: '1'
+          MAX_EPISODES_PER_ANIME: '1'
         run: node scripts/sync-franime.mjs
