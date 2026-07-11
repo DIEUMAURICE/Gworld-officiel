@@ -148,7 +148,8 @@ async function main() {
   }
 
   const summary = { discovered, saved, skipped, failed, finished_at: new Date().toISOString() };
-  await db.from('sync_runs').insert(summary).catch(() => {});
+  const { error: runError } = await db.from('sync_runs').insert(summary);
+  if (runError) console.error('Could not save sync summary:', runError.message);
   console.log(JSON.stringify(summary));
   if (failed > 20 && saved === 0) process.exitCode = 1;
 }
